@@ -1,0 +1,291 @@
+# ============================================================================
+# EXAMPLE domain-specific MWE list.  NOT a default.  NOT authoritative.
+# ============================================================================
+#
+# This is a hand-curated list the author assembled by mixing:
+#   - UD v2 "fixed" grammaticalized prepositional phrases (section A)
+#   - earnings-call / financial-reporting jargon known from general knowledge
+#     (sections B, D, E)
+#   - business-culture phrases taken from the RFS 2021 paper's dictionary
+#     appendix (section C)
+# The tokens were not derived from any corpus-driven process. Treat them as
+# illustrative of what a domain-specific MWE list might look like.
+#
+# How to use:
+#   Config(mwe_list="finance")   # opt-in to this list
+#   Config(mwe_list="path.txt")  # your own list
+#   Config(mwe_list=None)        # default: no static list; gensim Phrases
+#                                 # handles MWE discovery dynamically from
+#                                 # your corpus (what the 2021 paper did).
+#
+# Format: one MWE per line, spaces between tokens. Lines starting with # are
+# comments. Internal underscores in a line are treated as spaces too.
+#
+# Sections below are illustrative, not structural. The tokenizer loads
+# everything as a flat list of tuples.
+
+# ========================================================================
+# A. UD v2 fixed-expression idioms (grammaticalized prepositions / adverbs)
+# ========================================================================
+as soon as
+as well as
+as such as
+as long as
+as far as
+as much as
+along with
+because of
+by and large
+by means of
+due to
+even though
+except for
+in addition to
+in case of
+in favor of
+in front of
+in order for
+in order that
+in order to
+in spite of
+in terms of
+instead of
+on behalf of
+on top of
+out of
+rather than
+regardless of
+so that
+such as
+thanks to
+with regard to
+with respect to
+with the exception of
+
+# ========================================================================
+# B. Earnings-call / financial-reporting jargon (compound NPs)
+# ========================================================================
+acid test ratio
+annual report
+asset allocation
+balance sheet
+basis point
+book value
+business model
+capital expenditure
+capital expenditures
+capital markets
+cash flow
+cash flows
+cost of goods sold
+credit default swap
+credit rating
+cross selling
+customer acquisition
+customer base
+debt to equity
+dividend yield
+due diligence
+earnings call
+earnings guidance
+earnings per share
+equity financing
+exchange rate
+fair value
+fiscal year
+fixed cost
+fixed income
+forward guidance
+forward looking statement
+forward looking statements
+free cash flow
+general and administrative
+going concern
+gross margin
+going forward
+interest rate
+joint venture
+key performance indicator
+letter of intent
+market cap
+market capitalization
+market share
+merger and acquisition
+mergers and acquisitions
+net income
+non gaap
+operating expense
+operating expenses
+operating income
+operating margin
+order book
+per share
+price target
+product line
+profit and loss
+profit margin
+prospective buyer
+quarter over quarter
+rate of return
+recurring revenue
+research and development
+return on equity
+return on investment
+revenue growth
+risk management
+run rate
+same store sales
+shareholder value
+share repurchase
+short term
+long term
+supply chain
+top line
+bottom line
+total revenue
+unit economics
+value proposition
+variable cost
+working capital
+year on year
+year over year
+year to date
+
+# ========================================================================
+# C. Business-culture phrases (the 2021 paper's dictionary targets)
+# ========================================================================
+best in class
+best of breed
+best practice
+best practices
+bottom up
+top down
+bottom of the pyramid
+category killer
+core competency
+core competencies
+cost leadership
+cross functional
+customer centric
+customer commitment
+customer experience
+customer expectation
+customer expectations
+cutting edge
+end to end
+first mover
+first to market
+full service
+go to market
+go to market strategy
+hand in glove
+high quality
+ivory tower
+leadership team
+management team
+mission critical
+mission driven
+next generation
+on the ground
+out of the box
+over the top
+piece of cake
+plug and play
+point of sale
+real time
+rock bottom
+shoulder to shoulder
+six sigma
+state of the art
+top of mind
+touch point
+turn around
+turnkey solution
+value add
+value added
+value chain
+well positioned
+white space
+win win
+world class
+world wide
+
+# ========================================================================
+# D. Common phrasal verbs
+# ========================================================================
+bring up
+bring together
+carry out
+come up
+come across
+come up with
+figure out
+focus on
+follow through
+follow up
+get back
+get through
+give up
+go after
+go ahead
+hand in
+hand out
+look at
+look for
+look forward
+look into
+look over
+look up
+make up
+move forward
+move on
+pick up
+plan ahead
+pull together
+put forward
+put together
+reach out
+roll out
+set up
+show up
+sort out
+speak up
+step back
+step down
+step up
+stick with
+take off
+take on
+take over
+take up
+think through
+turn around
+turn out
+work out
+
+# ========================================================================
+# E. Named multi-word events / organizations / facilities
+# ========================================================================
+big data
+big tech
+board of directors
+c level
+chief executive officer
+chief financial officer
+chief information officer
+chief operating officer
+chief technology officer
+dow jones
+federal reserve
+human resources
+information technology
+machine learning
+new york
+private equity
+public offering
+san francisco
+silicon valley
+united kingdom
+united states
+venture capital
+wall street
