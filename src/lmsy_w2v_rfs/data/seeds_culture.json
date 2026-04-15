@@ -1,0 +1,30 @@
+{
+  "_paper": "Li, Mai, Shen, Yan (2021), 'Measuring Corporate Culture Using Machine Learning,' RFS 34(7):3265-3315.",
+  "_doi": "10.1093/rfs/hhaa079",
+  "_note": "Five-dimension seed dictionary from global_options.py lines 33-92 of the 2021 replication repo.",
+  "dims": ["integrity", "teamwork", "innovation", "respect", "quality"],
+  "seeds": {
+    "integrity": [
+      "integrity", "ethic", "ethical", "accountable", "accountability",
+      "trust", "honesty", "honest", "honestly", "fairness",
+      "responsibility", "responsible", "transparency", "transparent"
+    ],
+    "teamwork": [
+      "teamwork", "collaboration", "collaborate", "collaborative",
+      "cooperation", "cooperate", "cooperative"
+    ],
+    "innovation": [
+      "innovation", "innovate", "innovative", "creativity", "creative",
+      "create", "passion", "passionate", "efficiency", "efficient",
+      "excellence", "pride"
+    ],
+    "respect": [
+      "respectful", "talent", "talented", "employee", "dignity",
+      "empowerment", "empower"
+    ],
+    "quality": [
+      "quality", "customer", "customer_commitment", "dedication",
+      "dedicated", "dedicate", "customer_expectation"
+    ]
+  }
+}

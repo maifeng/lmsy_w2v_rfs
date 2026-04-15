@@ -1,0 +1,88 @@
+site_name: lmsy_w2v_rfs
+site_description: Word2Vec-based corporate-culture measurement, ported from Li, Mai, Shen, Yan (2021).
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+      primary: custom
+      accent: custom
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+      primary: custom
+      accent: custom
+  features:
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+  - tables
+  - attr_list
+
+plugins:
+  - search
+  - include-markdown
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - src/lmsy_w2v_rfs
+          options:
+            show_source: false
+            show_signature_annotations: true
+            members_order: source
+            docstring_style: google
+            heading_level: 3
+
+nav:
+  - Home: index.md
+  - Concepts:
+      - Two-phase preprocessing: concepts/two-phase-preprocessing.md
+      - Word2Vec dictionary: concepts/word2vec-dictionary.md
+      - Scoring: concepts/scoring.md
+  - How-to:
+      - Install CoreNLP: how-to/install-corenlp.md
+      - Run from the command line: how-to/run-from-cli.md
+      - Load your documents: how-to/load-documents.md
+      - Use your own seeds: how-to/use-your-own-seeds.md
+      - Switch preprocessor: how-to/switch-preprocessor.md
+      - Whiten the dimension scores: how-to/whiten-scores.md
+      - Resume after a crash: how-to/resume-after-crash.md
+      - Aggregate to firm-year: how-to/aggregate-firm-year.md
+      - Run on HPC: how-to/run-on-hpc.md
+  - Reference:
+      - Pipeline: reference/pipeline.md
+      - Config: reference/config.md
+      - Preprocessors: reference/preprocessors.md
+      - Dictionary: reference/dictionary.md
+      - Scoring: reference/scoring.md
+      - Word2Vec: reference/w2v.md
+      - CLI: reference/cli.md
+  - Explanation:
+      - Design decisions: explanation/design-decisions.md
+      - MWE benchmark comparison: explanation/mwe-comparison.md
+      - Troubleshooting: explanation/troubleshooting.md

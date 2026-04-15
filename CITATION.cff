@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the paper and the software itself."
+type: software
+title: "lmsy_w2v_rfs"
+version: "0.1.0a1"
+date-released: "2026-04-13"
+license: MIT
+url: "https://github.com/feng-mai/lmsy_w2v_rfs"
+
+authors:
+  - family-names: Mai
+    given-names: Feng
+    affiliation: "University of Iowa, Tippie College of Business"
+
+references:
+  - type: article
+    title: "Measuring Corporate Culture Using Machine Learning"
+    authors:
+      - family-names: Li
+        given-names: Kai
+      - family-names: Mai
+        given-names: Feng
+      - family-names: Shen
+        given-names: Rui
+      - family-names: Yan
+        given-names: Xinyan
+    journal: "Review of Financial Studies"
+    volume: 34
+    issue: 7
+    start: 3265
+    end: 3315
+    year: 2021
+    doi: "10.1093/rfs/hhaa079"
