@@ -115,4 +115,38 @@ my_cfg = cfg.with_(seeds={
     "risk":   ["risk", "uncertainty", "volatility", "downside"],
     "growth": ["growth", "expansion", "scale", "upside"],
 })
-my_cfg.dims
+print("Custom dimensions:", my_cfg.dims)
+
+# %%
+p_custom = Pipeline(texts=texts, doc_ids=doc_ids, work_dir="runs/custom", config=my_cfg)
+p_custom.run(methods=("TFIDF",))
+p_custom.score_df("TFIDF").head()
+
+# %% [markdown]
+# ## 7. Compare scoring methods
+#
+# The pipeline supports three scoring variants: raw term frequency (TF),
+# TF-IDF, and weighted-frequency IDF (WFIDF). The choice rarely changes
+# the ranking but affects the scale of the scores.
+
+# %%
+scores = p.score_df("TFIDF")
+for method in ("TF", "TFIDF", "WFIDF"):
+    s = p.score_df(method)
+    print(f"{method:8s} mean integrity = {s['integrity'].mean():.4f}")
+
+# %% [markdown]
+# ## 8. Citation
+#
+# If you use this package in research, please cite:
+#
+# ```
+# Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan. 2021.
+# "Measuring Corporate Culture Using Machine Learning."
+# Review of Financial Studies 34(7):3265-3315.
+# https://doi.org/10.1093/rfs/hhaa079
+# ```
+
+# %%
+import lmsy_w2v_rfs
+print(lmsy_w2v_rfs.__paper__)
