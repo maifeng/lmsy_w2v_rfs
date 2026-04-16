@@ -141,13 +141,19 @@ print("Saved to w2v_glassdoor_scores.csv")
 # %%
 merged = corpus[["review_id", "firm_id", "year", "rating_culture"]].copy()
 merged["review_id"] = merged["review_id"].astype(str)
-merged = merged.merge(scores, left_on="review_id", right_on="doc_id", how="inner")
+id_col = [c for c in scores.columns if c.lower() == "doc_id"][0]
+merged = merged.merge(scores, left_on="review_id", right_on=id_col, how="inner")
 
 print("Correlation of each dimension with rating_culture:")
 for dim in CULTURE_DIMS:
     if dim in merged.columns:
         r = merged[dim].corr(merged["rating_culture"])
         print(f"  {dim:12s}: {r:+.3f}")
+print(f"\nNon-zero score rates (short reviews have sparse dictionaries):")
+for dim in CULTURE_DIMS:
+    if dim in merged.columns:
+        nz = (merged[dim] > 0).mean()
+        print(f"  {dim:12s}: {nz:.0%} of reviews")
 
 # %% [markdown]
 # ## 8. Compare scoring methods
