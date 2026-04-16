@@ -35,14 +35,16 @@ and a one-shot `run`. Stages are idempotent: rerunning does not redo work unless
 
 This was the explicit ask when building this package:
 
-1. **Phase 1** (Stanford CoreNLP, syntactic multi-word expressions). Toggle with
-   `Config.use_corenlp=True`. Default: off, because CoreNLP needs Java and a ~1 GB
-   download.
+1. **Phase 1** (preprocessor-based MWE joining + NER masking). Select with
+   `Config(preprocessor=...)`. Options: `"corenlp"` (default, paper-exact, needs
+   Java), `"spacy"` (fastest, Python-native), `"stanza"`, `"static"` (curated
+   list only), `"none"` (skip Phase 1).
 2. **Phase 2** (gensim `Phrases`, corpus-learned bigrams/trigrams). Toggle with
    `Config.use_gensim_phrases=True` and `Config.phrase_passes=N`. Default: on,
    2 passes (bigram + trigram).
 
-The package has to work with Phase 1 off. The offline test suite proves this.
+The package has to work with Phase 1 off (`preprocessor="none"`). The offline
+test suite proves this.
 
 ## CoreNLP design decisions
 

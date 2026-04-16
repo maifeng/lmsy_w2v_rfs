@@ -21,10 +21,10 @@
 # **Paper:** https://doi.org/10.1093/rfs/hhaa079
 
 # %%
-# !pip install -q lmsy_w2v_rfs
+# !pip install -q lmsy_w2v_rfs    # uncomment and run in Colab
 
 # %%
-from lmsy_w2v_rfs import Config, Pipeline, CULTURE_SEEDS, CULTURE_DIMS
+from lmsy_w2v_rfs import Config, Pipeline, CULTURE_DIMS
 
 # %% [markdown]
 # ## 1. Build a toy corpus
@@ -65,12 +65,16 @@ len(texts)
 # %% [markdown]
 # ## 2. Configure the pipeline
 #
-# With `use_corenlp=False`, no Java is needed. The gensim Phrases pass still
-# learns corpus-specific bigrams and trigrams.
+# Setting `preprocessor="none"` skips Java/CoreNLP entirely. The gensim
+# Phrases pass still learns corpus-specific bigrams and trigrams.
+#
+# These settings are tuned for a tiny 25-document demo. For a real corpus,
+# use the defaults: 300-dim vectors, 500 expanded words per dimension,
+# `preprocessor="spacy"` (or `"corenlp"` for paper-exact replication).
 
 # %%
 cfg = Config(
-    use_corenlp=False,
+    preprocessor="none",
     use_gensim_phrases=True,
     phrase_passes=2,
     phrase_min_count=2,
@@ -84,14 +88,28 @@ cfg = Config(
 cfg
 
 # %% [markdown]
-# ## 3. Run all five stages
+# ## 3. Run the pipeline
+#
+# `Pipeline.run()` executes five stages in order:
+#
+# 1. **Parse**: tokenize and (optionally) lemmatize + NER-mask the corpus.
+# 2. **Clean**: lowercase, remove stopwords and short tokens.
+# 3. **Phrase**: learn bigrams/trigrams via gensim Phrases.
+# 4. **Train**: fit a Word2Vec model on the cleaned corpus.
+# 5. **Expand + Score**: for each dimension, find the nearest neighbors of
+#    the seed words in vector space, then score every document by weighted
+#    term frequency against the expanded dictionary.
 
 # %%
 p = Pipeline(texts=texts, doc_ids=doc_ids, work_dir="runs/quickstart", config=cfg)
-p.run(methods=("TF", "TFIDF", "WFIDF"))
+p.run()
 
 # %% [markdown]
 # ## 4. Inspect the expanded dictionary
+#
+# Starting from the seed words (e.g., "integrity", "honesty", "ethic"),
+# Word2Vec nearest-neighbor search surfaces corpus-specific terms that the
+# researcher did not hand-pick. This is the core contribution of the method.
 
 # %%
 for dim in CULTURE_DIMS:
@@ -100,9 +118,18 @@ for dim in CULTURE_DIMS:
 
 # %% [markdown]
 # ## 5. Inspect scores
+#
+# Each column is a culture dimension. Higher values mean the document uses
+# more words from that dimension's expanded dictionary. The scoring variant
+# below is TF-IDF weighted.
 
 # %%
-p.score_df("TFIDF").head()
+scores = p.score_df("TFIDF")
+scores.head()
+
+# %%
+scores.to_csv("culture_scores.csv", index=False)
+print("Saved to culture_scores.csv")
 
 # %% [markdown]
 # ## 6. Bring your own seeds
@@ -150,3 +177,14 @@ for method in ("TF", "TFIDF", "WFIDF"):
 # %%
 import lmsy_w2v_rfs
 print(lmsy_w2v_rfs.__paper__)
+
+# %% [markdown]
+# ## 9. Related packages
+#
+# This workshop covers three tools. Pick the one that fits your research question:
+#
+# | Package | Best for | Runtime |
+# |---|---|---|
+# | **`lmsyz_genai_ie_rfs`** | Structured extraction: culture type, causes, consequences, causal triples | Requires an LLM API key |
+# | **`spar_measure`** | Scoring short texts on a custom semantic scale (e.g., CVF dimensions) | Local CPU/GPU, no API key |
+# | **`lmsy_w2v_rfs`** (this notebook) | Historical, deterministic 5-dimension culture scores from word2vec | Local CPU, no API key |
