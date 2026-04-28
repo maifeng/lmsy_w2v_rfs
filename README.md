@@ -86,13 +86,12 @@ Both paths update both the in-memory dict and the on-disk CSV. Cached scores are
 
 ```python
 p.score_df("TFIDF")                  # one row per document
-p.firm_year(id_to_firm, "TFIDF")     # aggregated to (firm, year)
 ```
 
 | Doc_ID | risk | growth | document_length |
 |---|---|---|---|
-| AAPL_2024Q1 | 0.05 | 0.82 | 15,240 |
-| WFC_2024Q1  | 0.73 | 0.04 | 12,105 |
+| doc_1 | 0.05 | 0.82 | 15,240 |
+| doc_2 | 0.73 | 0.04 | 12,105 |
 
 ---
 
@@ -104,7 +103,7 @@ Pick whichever matches what you have on disk:
 Pipeline(texts=[...], doc_ids=[...], work_dir=..., config=cfg)        # in-memory list
 Pipeline.from_csv("transcripts.csv", text_col="text", id_col="id", ...) # CSV
 Pipeline.from_dataframe(df, text_col="text", id_col="id", ...)          # DataFrame
-Pipeline.from_directory("./10k_filings/", pattern="*.txt", ...)         # one file per doc
+Pipeline.from_directory("./docs/", pattern="*.txt", ...)                # one file per doc
 Pipeline.from_text_file("docs.txt", id_path="ids.txt", ...)             # one doc per line
 Pipeline.from_jsonl("transcripts.jsonl", text_key="t", id_key="i", ...) # JSONL
 ```
@@ -158,16 +157,6 @@ Full `Config` knob list and benchmark notes: see [docs/](docs/).
 | `TFIDF` | `tf · log(N/df)` |
 | `WFIDF` | `(1 + log tf) · log(N/df)` |
 | `TFIDF+SIMWEIGHT`, `WFIDF+SIMWEIGHT` | × `1/ln(2 + rank)` |
-
----
-
-## Limits
-
-The scorer is a bag-of-words counter over a learned vocabulary. It cannot read sentence context, cannot handle negation, cannot tell practice from aspiration. "We do not tolerate a lack of integrity" scores like a genuine integrity claim.
-
-The dictionary is frozen at training time. New domain words mean retraining.
-
-For context-aware scoring, see the companion package `lmsyz_genai_ie_rfs`, which replaces the weighted count with an LLM prompt.
 
 ---
 
