@@ -53,3 +53,11 @@ Joins document-level scores to a firm-year mapping, normalizes each dimension
 by document length (per 100 tokens), and averages within each firm-year cell.
 
 ::: lmsy_w2v_rfs.aggregate_to_firm_year
+
+## zca_whiten
+
+Applies ZCA whitening to a matrix of document-level scores so that each
+dimension has unit variance and the dimensions are decorrelated. Useful
+when the seed dimensions overlap in embedding space.
+
+::: lmsy_w2v_rfs.zca_whiten

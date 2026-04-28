@@ -1,5 +1,5 @@
 site_name: lmsy_w2v_rfs
-site_description: Word2Vec-based corporate-culture measurement, ported from Li, Mai, Shen, Yan (2021).
+site_description: "Word2Vec dictionary expansion and scoring for any seed-based vocabulary."
 
 theme:
   name: material
@@ -50,7 +50,7 @@ plugins:
       handlers:
         python:
           paths:
-            - src/lmsy_w2v_rfs
+            - src
           options:
             show_source: false
             show_signature_annotations: true
@@ -81,6 +81,7 @@ nav:
       - Dictionary: reference/dictionary.md
       - Scoring: reference/scoring.md
       - Word2Vec: reference/w2v.md
+      - Seeds: reference/seeds.md
       - CLI: reference/cli.md
   - Explanation:
       - Design decisions: explanation/design-decisions.md
