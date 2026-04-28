@@ -31,19 +31,11 @@
 
 # %% [markdown]
 # ## 1. Install and download the corpus
-#
-# **Colab quick test (TestPyPI build):** run the install cell below, then upload
-# `glassdoor_culture_2000.csv` via Colab's file pane (or `files.upload()`).
 
 # %%
-# Colab: install from TestPyPI. Uncomment and run.
-# !pip install -q --no-cache-dir --index-url https://test.pypi.org/simple/ \
-#     --extra-index-url https://pypi.org/simple/ -U lmsy_w2v_rfs
-
-# %%
-# Colab: upload glassdoor_culture_2000.csv from your laptop. Uncomment and run.
-# from google.colab import files
-# files.upload()
+# Colab: install the package and download the workshop corpus.
+# !pip install -q -U lmsy_w2v_rfs
+# !wget -q https://raw.githubusercontent.com/maifeng/lmsy_w2v_rfs/main/notebooks/data/glassdoor_culture_2000.csv
 
 # %% [markdown]
 # ## 2. Define your seeds

@@ -1,6 +1,6 @@
-# Seed words expansion and measurements using Word2Vec
+# Seed words expansion and measurements using Word2Vec (Li, Mai, Shen, Yan 2021 RFS)
 
-Builds a **corpus-specific measurement dictionary with Word2Vec**, ported from Li, Mai, Shen, Yan (2021). For each concept you want to measure in your corpus:
+Builds a **corpus-specific measurement dictionary with Word2Vec**. For each concept you want to measure in your corpus:
 
 - **You provide** a short seed-word list per concept.
 - **The package builds** a ranked dictionary of the words and multi-word phrases your corpus uses to express that concept.
@@ -218,7 +218,7 @@ CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv 
 
 Once parsing finishes, downstream stages stream through disk: `clean` reads parsed sentences line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The bottleneck is the **input stage**: the document loader holds the corpus in a Python list before parsing begins.
 
-The scaling-friendly input format is **one document per line in a single file**, with an optional parallel IDs file. This is what the 2021 paper used for ~270,000 earnings-call transcripts on a single workstation. A directory of millions of small files is the wrong shape: filesystems run out of inodes long before they run out of bytes, and small-file I/O is much slower than streaming a single large file.
+A scaling-friendly input format is **one document per line in a single file**, with an optional parallel IDs file. 
 
 ```python
 from lmsy_w2v_rfs import Pipeline, Config, load_seeds
