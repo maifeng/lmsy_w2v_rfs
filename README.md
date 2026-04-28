@@ -274,6 +274,10 @@ Config(
 
 ---
 
+## Documentation
+
+Full docs (concepts, how-to guides, API reference): https://maifeng.github.io/lmsy_w2v_rfs/
+
 ## Citation
 
 If you use this package in your research, please cite the paper this implementation is based on:
