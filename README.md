@@ -1,5 +1,9 @@
 # Seed words expansion and measurements using Word2Vec (Li, Mai, Shen, Yan 2021 RFS)
 
+[![Open in Colab](https://img.shields.io/badge/Colab-quickstart-orange?logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb)
+[![PyPI version](https://img.shields.io/pypi/v/lmsy_w2v_rfs.svg)](https://pypi.org/project/lmsy_w2v_rfs/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Builds a **corpus-specific measurement dictionary with Word2Vec**. For each concept you want to measure in your corpus:
 
 - **You provide** a short seed-word list per concept.
