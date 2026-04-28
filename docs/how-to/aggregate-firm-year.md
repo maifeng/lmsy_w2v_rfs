@@ -1,10 +1,11 @@
-# Aggregate document scores to firm-year
+# Aggregate document scores
 
 ## Problem
 
-The pipeline scores every document independently: one row per transcript, one
-column per culture dimension. Corporate-finance research usually wants
-firm-year panels, not document panels. You need to (a) map each document to
+The pipeline scores every document independently: one row per document, one
+column per dimension. Many analyses want grouped panels: for example,
+firm-year panels for corporate-finance research or product-year panels for
+market studies. You need to (a) map each document to
 its firm and fiscal year, (b) normalize by document length so long transcripts
 do not dominate, (c) average across all documents within a firm-year, and (d)
 merge the resulting panel with external firm covariates (total assets,
@@ -81,8 +82,9 @@ covariates = pd.read_csv("compustat_firm_year.csv")
 
 merged = panel.merge(covariates, on=["firm_id", "time"], how="inner")
 
-# Standardize culture scores within year for readability of coefficients.
-for dim in ["innovation", "integrity", "quality", "respect", "teamwork"]:
+# Standardize dimension scores within year for readability of coefficients.
+dims = list(seeds.keys())  # or whatever column names your pipeline used
+for dim in dims:
     merged[dim + "_z"] = merged.groupby("time")[dim].transform(
         lambda s: (s - s.mean()) / s.std()
     )

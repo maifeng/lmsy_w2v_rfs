@@ -56,4 +56,4 @@ The two phases are complementary because they rely on different signals:
 | `forward_looking_statement` | Phase 2 | High-frequency collocation, no UD label |
 | `fourth_quarter` | Phase 2 | Domain collocation, no UD label |
 
-Phase 1a is grammar-driven and catches syntactic patterns that appear once or twice in the corpus. Phase 2 is frequency-driven and catches idiomatic phrasings that occur often enough to dominate their constituent words' co-occurrence statistics. Both run by default, and the full benchmark behind this design lives in [MWE benchmark comparison](../explanation/mwe-comparison.md).
+Phase 1a is grammar-driven and catches syntactic patterns that appear once or twice in the corpus. Phase 2 is frequency-driven and catches idiomatic phrasings that occur often enough to dominate their constituent words' co-occurrence statistics. Both run by default. The full benchmark behind this design, including NER quality and throughput numbers, lives in [Preprocessor comparison](../explanation/mwe-comparison.md).

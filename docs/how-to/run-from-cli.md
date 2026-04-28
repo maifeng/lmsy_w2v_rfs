@@ -15,11 +15,13 @@ complete run from nothing to a `scores_TFIDF.csv` you can open in Excel.
 ### 1. Install
 
 ```bash
-pip install "lmsy_w2v_rfs[corenlp]"        # or [spacy] if you cannot use Java
-lmsy-w2v-rfs download-corenlp              # one-time ~1 GB download, skip if using spaCy
+pip install lmsy_w2v_rfs
 ```
 
-Verify:
+If you want the CoreNLP backend (best MWE quality, needs Java), follow the steps in
+[Install the CoreNLP backend](install-corenlp.md).
+
+Verify the CLI is available:
 
 ```bash
 lmsy-w2v-rfs --help
