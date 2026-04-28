@@ -1,4 +1,5 @@
 site_name: lmsy_w2v_rfs
+site_url: https://maifeng.github.io/lmsy_w2v_rfs/
 site_description: "Word2Vec dictionary expansion and scoring for any seed-based vocabulary."
 
 theme:
