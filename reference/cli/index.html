@@ -1,0 +1,1908 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Word2Vec dictionary expansion and scoring for any seed-based vocabulary.">
+      
+      
+      
+        <link rel="canonical" href="https://maifeng.github.io/lmsy_w2v_rfs/reference/cli/">
+      
+      
+        <link rel="prev" href="../seeds/">
+      
+      
+        <link rel="next" href="../../explanation/design-decisions/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>CLI - lmsy_w2v_rfs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#command-line-interface" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="lmsy_w2v_rfs" class="md-header__button md-logo" aria-label="lmsy_w2v_rfs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            lmsy_w2v_rfs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CLI
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="lmsy_w2v_rfs" class="md-nav__button md-logo" aria-label="lmsy_w2v_rfs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    lmsy_w2v_rfs
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/two-phase-preprocessing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two-phase preprocessing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/word2vec-dictionary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Word2Vec dictionary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/scoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How-to
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    How-to
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/load-documents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Load your documents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/use-your-own-seeds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Use your own seeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/switch-preprocessor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Switch preprocessor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/install-corenlp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install CoreNLP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/whiten-scores/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Whiten the dimension scores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/resume-after-crash/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resume after a crash
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/aggregate-firm-year/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Aggregate document scores
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/run-on-hpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run on HPC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/run-from-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Run from the command line
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-to/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../preprocessors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preprocessors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dictionary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dictionary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../w2v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Word2Vec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../seeds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Seeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seeds-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeds flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-preprocessor-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 (preprocessor) flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-gensim-phrases-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 (gensim Phrases) flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#word2vec-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Word2Vec flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dictionary-and-scoring-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dictionary and scoring flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-invocations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common invocations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#download-corenlp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        download-corenlp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting help
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Explanation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Explanation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/design-decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../explanation/mwe-comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preprocessor comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        run
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#seeds-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeds flag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-1-preprocessor-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 1 (preprocessor) flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phase-2-gensim-phrases-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Phase 2 (gensim Phrases) flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#word2vec-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Word2Vec flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dictionary-and-scoring-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dictionary and scoring flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output layout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#common-invocations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common invocations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#download-corenlp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        download-corenlp
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting help
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="command-line-interface">Command-line interface<a class="headerlink" href="#command-line-interface" title="Permanent link">&para;</a></h1>
+<p>The package ships a <code>lmsy-w2v-rfs</code> console script with two subcommands.</p>
+<ul>
+<li><a href="#run"><code>run</code></a>: end-to-end pipeline from documents on disk to scores on disk.</li>
+<li><a href="#download-corenlp"><code>download-corenlp</code></a>: one-time Stanford CoreNLP install.</li>
+</ul>
+<p>For an end-to-end walkthrough, see <a href="../../how-to/run-from-cli/">Run from the command line</a>.</p>
+<hr />
+<h2 id="run"><code>run</code><a class="headerlink" href="#run" title="Permanent link">&para;</a></h2>
+<p>Reads documents from <code>--input</code>, parses + cleans + trains Word2Vec + expands
+the seed dictionary + scores every document on every dimension, and writes
+all artifacts under <code>--out</code>.</p>
+<p>Exit code 0 on success. 1 on argparse usage errors. Python exceptions bubble
+up with their native traceback and non-zero code.</p>
+<h3 id="input-flags">Input flags<a class="headerlink" href="#input-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--input</code>, <code>-i</code></td>
+<td>path</td>
+<td>required</td>
+<td>Input path; interpretation set by <code>--input-format</code>.</td>
+</tr>
+<tr>
+<td><code>--input-format</code></td>
+<td>choice</td>
+<td><code>text</code></td>
+<td>One of <code>text</code>, <code>csv</code>, <code>jsonl</code>, <code>directory</code>.</td>
+</tr>
+<tr>
+<td><code>--ids</code></td>
+<td>path</td>
+<td><code>None</code></td>
+<td>[text] Optional matching IDs file, one ID per line. If omitted, line numbers are used.</td>
+</tr>
+<tr>
+<td><code>--text-col</code></td>
+<td>str</td>
+<td><code>text</code></td>
+<td>[csv] Column holding document text.</td>
+</tr>
+<tr>
+<td><code>--id-col</code></td>
+<td>str</td>
+<td><code>id</code></td>
+<td>[csv] Column holding document IDs. Set to <code>""</code> to use the DataFrame row index.</td>
+</tr>
+<tr>
+<td><code>--text-key</code></td>
+<td>str</td>
+<td><code>text</code></td>
+<td>[jsonl] JSON key holding document text.</td>
+</tr>
+<tr>
+<td><code>--id-key</code></td>
+<td>str</td>
+<td><code>id</code></td>
+<td>[jsonl] JSON key holding document IDs. Set to <code>""</code> to use 1-based line numbers.</td>
+</tr>
+<tr>
+<td><code>--glob-pattern</code></td>
+<td>str</td>
+<td><code>*.txt</code></td>
+<td>[directory] Glob for files under <code>--input</code>. Document IDs come from file stems.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output-flags">Output flags<a class="headerlink" href="#output-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--out</code>, <code>-o</code></td>
+<td>path</td>
+<td><code>runs/out</code></td>
+<td>Output directory. Stages are idempotent: rerunning skips stages whose outputs already exist.</td>
+</tr>
+<tr>
+<td><code>--force</code></td>
+<td>flag</td>
+<td>off</td>
+<td>Rerun every stage regardless of existing outputs.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="seeds-flag">Seeds flag<a class="headerlink" href="#seeds-flag" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--seeds</code></td>
+<td>path</td>
+<td>(required)</td>
+<td>Seed dictionary file (<code>.json</code> or <code>.txt</code>). The package is theory-agnostic and has no built-in default. To reproduce the 2021 paper, dump <code>load_example_seeds("culture_2021")</code> to a JSON file. See <a href="../../how-to/use-your-own-seeds/">Use your own seed dictionary</a>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="phase-1-preprocessor-flags">Phase 1 (preprocessor) flags<a class="headerlink" href="#phase-1-preprocessor-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--preprocessor</code></td>
+<td>choice</td>
+<td><code>corenlp</code></td>
+<td><code>corenlp</code> (paper-faithful, needs Java) / <code>spacy</code> (fastest) / <code>stanza</code> (Python-native) / <code>static</code> (list-only) / <code>none</code>.</td>
+</tr>
+<tr>
+<td><code>--mwe-list</code></td>
+<td>str</td>
+<td><code>none</code></td>
+<td>Optional static MWE list post-pass. <code>none</code> skips. <code>finance</code> uses the packaged earnings-call example. Path loads a custom list.</td>
+</tr>
+<tr>
+<td><code>--spacy-model</code></td>
+<td>str</td>
+<td><code>en_core_web_sm</code></td>
+<td>spaCy model name when <code>--preprocessor=spacy</code>. <code>en_core_web_trf</code> is the best-NER slower option.</td>
+</tr>
+<tr>
+<td><code>--n-cores</code></td>
+<td>int</td>
+<td><code>4</code></td>
+<td>JVM threads for CoreNLP, <code>n_process</code> for spaCy / stanza. 4 is safe on an 8-core laptop; 8 on a workstation.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="phase-2-gensim-phrases-flags">Phase 2 (gensim Phrases) flags<a class="headerlink" href="#phase-2-gensim-phrases-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--no-phrases</code></td>
+<td>flag</td>
+<td>off</td>
+<td>Skip the gensim <code>Phrases</code> pass entirely.</td>
+</tr>
+<tr>
+<td><code>--phrase-passes</code></td>
+<td>int</td>
+<td><code>2</code></td>
+<td>1 = bigram only. 2 = bigram then trigram.</td>
+</tr>
+<tr>
+<td><code>--phrase-min-count</code></td>
+<td>int</td>
+<td><code>10</code></td>
+<td>Minimum bigram count. Lower on small corpora.</td>
+</tr>
+<tr>
+<td><code>--phrase-threshold</code></td>
+<td>float</td>
+<td><code>10.0</code></td>
+<td>gensim <code>Phrases</code> score threshold.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="word2vec-flags">Word2Vec flags<a class="headerlink" href="#word2vec-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--w2v-dim</code></td>
+<td>int</td>
+<td><code>300</code></td>
+</tr>
+<tr>
+<td><code>--w2v-window</code></td>
+<td>int</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>--w2v-min-count</code></td>
+<td>int</td>
+<td><code>5</code></td>
+</tr>
+<tr>
+<td><code>--w2v-epochs</code></td>
+<td>int</td>
+<td><code>20</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="dictionary-and-scoring-flags">Dictionary and scoring flags<a class="headerlink" href="#dictionary-and-scoring-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--n-words-dim</code></td>
+<td>int</td>
+<td><code>500</code></td>
+<td>Top-k expanded words per dimension.</td>
+</tr>
+<tr>
+<td><code>--methods</code></td>
+<td>list</td>
+<td><code>TF TFIDF WFIDF</code></td>
+<td>Any subset of <code>TF</code>, <code>TFIDF</code>, <code>WFIDF</code>, <code>TFIDF+SIMWEIGHT</code>, <code>WFIDF+SIMWEIGHT</code>.</td>
+</tr>
+<tr>
+<td><code>--zca-whiten</code></td>
+<td>flag</td>
+<td>off</td>
+<td>Decorrelate dimension columns. See <a href="../../how-to/whiten-scores/">Whiten the dimension scores</a>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output-layout">Output layout<a class="headerlink" href="#output-layout" title="Permanent link">&para;</a></h3>
+<p>After a successful <code>run</code>, <code>--out</code> contains:</p>
+<div class="highlight"><pre><span></span><code>runs/out/
+├── config.json              # frozen snapshot of the Config used
+├── parsed/
+│   ├── sentences.txt        # preprocessor output, one sentence per line
+│   └── sentence_ids.txt     # parallel IDs, one per sentence
+├── cleaned/
+│   └── sentences.txt        # stopwords and punctuation dropped
+├── corpora/                 # only if gensim Phrases is enabled
+│   ├── pass1.txt            # bigram-joined sentences
+│   └── pass2.txt            # trigram-joined sentences
+├── models/
+│   ├── phrases_pass1.mod    # saved gensim Phrases models
+│   ├── phrases_pass2.mod
+│   └── w2v.mod              # saved Word2Vec model
+└── outputs/
+    ├── expanded_dict.csv    # one column per dimension, ranked words
+    ├── scores_TF.csv        # document-level scores, one file per method
+    ├── scores_TFIDF.csv
+    └── scores_WFIDF.csv
+</code></pre></div>
+<p>Every <code>scores_*.csv</code> has columns: <code>Doc_ID</code>, one column per dimension
+(alphabetical), <code>document_length</code>.</p>
+<h3 id="common-invocations">Common invocations<a class="headerlink" href="#common-invocations" title="Permanent link">&para;</a></h3>
+<p><strong>Quickest: use a CSV with paper defaults.</strong></p>
+<div class="highlight"><pre><span></span><code>lmsy-w2v-rfs<span class="w"> </span>run<span class="w"> </span>--input<span class="w"> </span>transcripts.csv<span class="w"> </span>--input-format<span class="w"> </span>csv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--text-col<span class="w"> </span>transcript<span class="w"> </span>--id-col<span class="w"> </span>call_id<span class="w"> </span>--out<span class="w"> </span>runs/rfs2021
+</code></pre></div>
+<p><strong>Paper-faithful CoreNLP, 8 threads, all three scoring methods:</strong></p>
+<div class="highlight"><pre><span></span><code>lmsy-w2v-rfs<span class="w"> </span>download-corenlp<span class="w">             </span><span class="c1"># one time</span>
+lmsy-w2v-rfs<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--input<span class="w"> </span>transcripts.csv<span class="w"> </span>--input-format<span class="w"> </span>csv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--text-col<span class="w"> </span>transcript<span class="w"> </span>--id-col<span class="w"> </span>call_id<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out<span class="w"> </span>runs/corenlp8<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--preprocessor<span class="w"> </span>corenlp<span class="w"> </span>--n-cores<span class="w"> </span><span class="m">8</span>
+</code></pre></div>
+<p><strong>Fast spaCy path with custom seeds:</strong></p>
+<div class="highlight"><pre><span></span><code>lmsy-w2v-rfs<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--input<span class="w"> </span>transcripts.csv<span class="w"> </span>--input-format<span class="w"> </span>csv<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--text-col<span class="w"> </span>transcript<span class="w"> </span>--id-col<span class="w"> </span>call_id<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--seeds<span class="w"> </span>my_seeds.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--preprocessor<span class="w"> </span>spacy<span class="w"> </span>--spacy-model<span class="w"> </span>en_core_web_sm<span class="w"> </span>--n-cores<span class="w"> </span><span class="m">8</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out<span class="w"> </span>runs/spacy_custom
+</code></pre></div>
+<p><strong>Directory of SEC filings, static MWE list post-pass, ZCA whitening:</strong></p>
+<div class="highlight"><pre><span></span><code>lmsy-w2v-rfs<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--input<span class="w"> </span>./10k_filings/<span class="w"> </span>--input-format<span class="w"> </span>directory<span class="w"> </span>--glob-pattern<span class="w"> </span><span class="s2">&quot;*.txt&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--mwe-list<span class="w"> </span>finance<span class="w"> </span>--zca-whiten<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out<span class="w"> </span>runs/10k
+</code></pre></div>
+<p><strong>JSON Lines input, no parser, rely on gensim Phrases only:</strong></p>
+<div class="highlight"><pre><span></span><code>lmsy-w2v-rfs<span class="w"> </span>run<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--input<span class="w"> </span>dump.jsonl<span class="w"> </span>--input-format<span class="w"> </span>jsonl<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--text-key<span class="w"> </span>body<span class="w"> </span>--id-key<span class="w"> </span>id<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--preprocessor<span class="w"> </span>none<span class="w"> </span>--phrase-min-count<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--out<span class="w"> </span>runs/jsonl_demo
+</code></pre></div>
+<hr />
+<h2 id="download-corenlp"><code>download-corenlp</code><a class="headerlink" href="#download-corenlp" title="Permanent link">&para;</a></h2>
+<p>Installs Stanford CoreNLP into <code>$LMSY_W2V_RFS_HOME/corenlp</code> (or
+<code>~/.cache/lmsy_w2v_rfs/corenlp</code> if the env var is unset). Delegates to
+<code>stanza.install_corenlp</code>. Prints the install path on completion.</p>
+<p>Required once before the first <code>--preprocessor corenlp</code> run. Takes no
+flags. Requires network access and ~1 GB free disk.</p>
+<div class="highlight"><pre><span></span><code>lmsy-w2v-rfs<span class="w"> </span>download-corenlp
+<span class="c1"># CoreNLP installed at: /Users/you/.cache/lmsy_w2v_rfs/corenlp</span>
+</code></pre></div>
+<hr />
+<h2 id="getting-help">Getting help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
+<p>Every subcommand prints its own help with <code>--help</code>:</p>
+<div class="highlight"><pre><span></span><code>lmsy-w2v-rfs<span class="w"> </span>--help
+lmsy-w2v-rfs<span class="w"> </span>run<span class="w"> </span>--help
+lmsy-w2v-rfs<span class="w"> </span>download-corenlp<span class="w"> </span>--help
+</code></pre></div>
+<p>The grouped output (input / output / seeds / phase 1 / phase 2 / word2vec /
+scoring) is the same structure used above.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "search.suggest", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
