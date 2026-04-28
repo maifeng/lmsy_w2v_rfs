@@ -144,33 +144,75 @@ p.show_dictionary(top_k=10)
 p.dictionary_preview(top_k=10)
 
 # %% [markdown]
-# ## 7. Curate the dictionary (optional)
+# ## 7. Curate the dictionary (Step 4 of the paper's procedure)
 #
-# Word2Vec expansion picks up corpus-specific terms but also surfaces
-# noise. The 2021 paper's authors manually inspected and edited the
-# dictionary before scoring. You can do this two ways:
+# Word2Vec expansion surfaces noise alongside the signal: generic
+# positives (`excellent`, `overall`, `positive`), corpus-specific
+# outliers (`store` if many reviewers work in retail), and words too
+# vague to be informative (`everything`, `terms`). The 2021 paper,
+# Section 3.2: *"we manually inspect all the words in the auto-generated
+# dictionary and exclude words that do not fit."*
 #
-# **Programmatic** (replicable, in notebook):
+# The package supports two paths:
 #
-# ```python
-# p.edit_dictionary(
-#     remove={"integrity": ["fantastic", "build"]},
-#     add={"integrity": ["accountable"]},
-# )
-# ```
+# - **Programmatic**: `p.edit_dictionary(remove={...}, add={...})`
+# - **Spreadsheet**: edit `p.dict_path` in Excel or any text editor, save, `p.reload_dictionary()`.
 #
-# **Spreadsheet** (faster for big dicts): open `p.dict_path` in
-# Excel/CSV editor, edit, save, then call `p.reload_dictionary()`.
+# Both update the in-memory dictionary and the on-disk CSV in one call.
+# Cached scores are dropped automatically; rerun `p.score()` afterward.
 #
-# Both paths update both the in-memory dict and the on-disk CSV. After
-# curation, call `p.score()` again to rescore with the curated
-# dictionary.
+# **Read the comparison below carefully**: after curation, correlation
+# with the outcome may go DOWN. Generic positives (`excellent`, `overall`,
+# `positive`) often correlate with high culture ratings even though they
+# are not concept-specific. The point of curation is **construct
+# validity** (the dictionary measures only the concept), not maximum
+# correlation.
 
 # %%
-# Example: remove a noisy expansion candidate from "integrity".
-# p.edit_dictionary(remove={"integrity": ["fantastic"]})
-# p.score()  # rescore against the curated dict
-# p.show_dictionary(top_k=10)
+def correlations(scores_df: pd.DataFrame) -> dict[str, float]:
+    """Correlate each dimension column with rating_culture.
+
+    Args:
+        scores_df: DataFrame returned by ``p.score_df(...)``.
+
+    Returns:
+        Mapping of dimension name to Pearson correlation with rating_culture.
+    """
+    m = corpus[["review_id", "rating_culture"]].copy()
+    m["review_id"] = m["review_id"].astype(str)
+    sd = scores_df.copy()
+    id_col = [c for c in sd.columns if c.lower() == "doc_id"][0]
+    sd[id_col] = sd[id_col].astype(str)
+    m = m.merge(sd, left_on="review_id", right_on=id_col)
+    return {dim: float(m[dim].corr(m["rating_culture"])) for dim in cfg.dims if dim in m.columns}
+
+
+initial_corrs = correlations(p.score_df("TFIDF"))
+
+# Concrete noise candidates spotted in this run's expanded dictionary.
+# Words not present in a dimension are silently ignored, so this list can
+# be generous. In your own work, scan p.show_dictionary(top_k=20) and pick
+# words that are not concept-specific.
+p.edit_dictionary(remove={
+    "integrity":  ["inclusion", "boldness", "employee_engagement"],
+    "teamwork":   ["store", "excellent", "overall", "positive", "promotes", "encourages"],
+    "innovation": ["individual", "based", "safety", "incredible"],
+    "quality":    ["huge", "everything", "terms", "tech", "digital", "model",
+                   "space", "used", "short", "voice", "conversations",
+                   "approach", "thought", "works"],
+})
+
+p.score(methods=("TFIDF",))
+curated_corrs = correlations(p.score_df("TFIDF"))
+
+print(f"{'dimension':12s}  {'initial':>8s}  {'curated':>8s}  {'change':>8s}")
+for dim in cfg.dims:
+    i, c = initial_corrs.get(dim, 0.0), curated_corrs.get(dim, 0.0)
+    print(f"  {dim:10s}  {i:+8.3f}  {c:+8.3f}  {c - i:+8.3f}")
+
+# %%
+# Inspect the curated dictionary
+p.show_dictionary(top_k=10)
 
 # %% [markdown]
 # ## 8. Inspect scores
@@ -184,25 +226,22 @@ scores.to_csv("w2v_glassdoor_scores.csv", index=False)
 print("Saved to w2v_glassdoor_scores.csv")
 
 # %% [markdown]
-# ## 9. Merge scores with metadata
+# ## 9. Coverage check
 #
-# Since we scored the same corpus used by the other two workshop
-# notebooks, we can merge the dimension scores with Glassdoor metadata
-# and look for patterns. For example, do reviews with higher "teamwork"
-# scores also have higher culture ratings?
+# Short reviews have sparse dictionaries; some reviews score zero on
+# concepts they do not mention by any dictionary term. Inspect the
+# coverage to decide whether the corpus is dense enough for the
+# concepts you care about.
 
 # %%
 merged = corpus[["review_id", "firm_id", "year", "rating_culture"]].copy()
 merged["review_id"] = merged["review_id"].astype(str)
-id_col = [c for c in scores.columns if c.lower() == "doc_id"][0]
-merged = merged.merge(scores, left_on="review_id", right_on=id_col, how="inner")
+scores_str = scores.copy()
+id_col = [c for c in scores_str.columns if c.lower() == "doc_id"][0]
+scores_str[id_col] = scores_str[id_col].astype(str)
+merged = merged.merge(scores_str, left_on="review_id", right_on=id_col, how="inner")
 
-print("Correlation of each dimension with rating_culture:")
-for dim in cfg.dims:
-    if dim in merged.columns:
-        r = merged[dim].corr(merged["rating_culture"])
-        print(f"  {dim:12s}: {r:+.3f}")
-print(f"\nNon-zero score rates (short reviews have sparse dictionaries):")
+print("Non-zero score rates (after curation):")
 for dim in cfg.dims:
     if dim in merged.columns:
         nz = (merged[dim] > 0).mean()
@@ -211,11 +250,12 @@ for dim in cfg.dims:
 # %% [markdown]
 # ## 10. Compare scoring methods
 #
-# The pipeline supports three scoring variants: raw term frequency (TF),
-# TF-IDF, and weighted-frequency IDF (WFIDF). The choice rarely changes
-# the ranking but affects the scale.
+# Three variants are supported: raw term frequency (TF), TF-IDF (the
+# 2021 paper's choice), and weighted-frequency IDF (WFIDF). The choice
+# rarely changes the ranking but affects the scale.
 
 # %%
+p.score(methods=("TF", "TFIDF", "WFIDF"))
 for method in ("TF", "TFIDF", "WFIDF"):
     s = p.score_df(method)
     print(f"{method:8s} mean {cfg.dims[0]} = {s[cfg.dims[0]].mean():.4f}")

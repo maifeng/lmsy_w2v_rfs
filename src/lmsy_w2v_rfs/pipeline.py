@@ -549,16 +549,16 @@ class Pipeline:
             self._culture_dict[dim] = existing
 
         write_dict_csv(self._culture_dict, self.dict_path)
-        # Drop any cached scores; they were computed against the old dict.
-        self._scores.clear()
+        self._invalidate_scores()
         return self._culture_dict
 
     def reload_dictionary(self) -> dict[str, list[str]]:
         """Reread the dictionary CSV from disk.
 
         Use this after editing ``pipeline.dict_path`` in a spreadsheet
-        or text editor. Cached scores are dropped because they were
-        computed against the previous dict.
+        or text editor. Both the in-memory score cache and any score
+        CSVs on disk are dropped, since they were computed against the
+        previous dict; the next call to ``score()`` will recompute.
 
         Returns:
             The reloaded dict.
@@ -569,8 +569,21 @@ class Pipeline:
                 "Run .expand_dictionary() first."
             )
         self._culture_dict, _ = read_dict_csv(self.dict_path)
-        self._scores.clear()
+        self._invalidate_scores()
         return self._culture_dict
+
+    def _invalidate_scores(self) -> None:
+        """Drop in-memory score cache and remove score CSVs on disk.
+
+        Called by :meth:`edit_dictionary` and :meth:`reload_dictionary`
+        so the next :meth:`score` call recomputes against the curated
+        dictionary instead of reusing stale CSVs.
+        """
+        self._scores.clear()
+        scores_dir = self.work_dir / "outputs"
+        if scores_dir.exists():
+            for path in scores_dir.glob("scores_*.csv"):
+                path.unlink()
 
     def _dump_config(self) -> None:
         try:
