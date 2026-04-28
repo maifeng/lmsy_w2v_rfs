@@ -37,7 +37,7 @@
 
 # %%
 # Colab: install from TestPyPI. Uncomment and run.
-# !pip install -q --index-url https://test.pypi.org/simple/ \
+# !pip install -q --no-cache-dir --index-url https://test.pypi.org/simple/ \
 #     --extra-index-url https://pypi.org/simple/ -U lmsy_w2v_rfs
 
 # %%

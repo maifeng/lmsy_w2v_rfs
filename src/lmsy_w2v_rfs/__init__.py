@@ -76,7 +76,7 @@ from .scoring import (
 )
 from .w2v import load_word2vec, train_word2vec
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __paper__ = (
     "Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan. 2021. "
