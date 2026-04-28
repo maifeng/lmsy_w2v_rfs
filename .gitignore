@@ -31,6 +31,9 @@ htmlcov/
 # Jupyter: track .py (jupytext percent), never .ipynb
 .ipynb_checkpoints/
 *.ipynb
+# Exception: the Colab-ready notebook is tracked so it can be opened
+# directly via colab.research.google.com/github/.../01_quickstart_colab.ipynb
+!notebooks/01_quickstart_colab.ipynb
 
 # MkDocs site build
 site/
