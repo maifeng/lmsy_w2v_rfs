@@ -42,7 +42,7 @@ up with their native traceback and non-zero code.
 
 | Flag | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `--seeds` | path | `None` | Seed dictionary file (`.json` or `.txt`). Omit to use the 2021 paper's five culture dimensions. See [Use your own seed dictionary](../how-to/use-your-own-seeds.md). |
+| `--seeds` | path | (required) | Seed dictionary file (`.json` or `.txt`). The package is theory-agnostic and has no built-in default. To reproduce the 2021 paper, dump `load_example_seeds("culture_2021")` to a JSON file. See [Use your own seed dictionary](../how-to/use-your-own-seeds.md). |
 
 ### Phase 1 (preprocessor) flags
 

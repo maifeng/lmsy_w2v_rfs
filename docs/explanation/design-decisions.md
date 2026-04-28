@@ -60,20 +60,20 @@ The idempotence is implemented by writing each stage's output to a stable path u
 
 ---
 
-## Why seeds are a `dict[str, list[str]]`
+## Why seeds are a `dict[str, list[str]]` (and required)
 
-The culture seeds live in `src/lmsy_w2v_rfs/data/seeds_culture.json` as a plain JSON mapping from dimension name to list of seed words. Custom seeds are passed to `Config` the same way:
+Seeds are passed to `Config` as a plain Python dict; there is no built-in default. The package is theory-agnostic and refuses to assume what you are measuring.
 
 ```python
-cfg = Config().with_(seeds={
+cfg = Config(seeds={
     "risk":   ["risk", "uncertainty", "volatility", "hedge"],
     "growth": ["growth", "expand", "expansion", "scale"],
 })
 ```
 
-No `SeedDictionary` class, no `CultureDimension` dataclass, no registry. Researchers working on domain-agnostic concepts should not have to import and subclass anything to experiment with a new seed set. Editing a dict in a notebook is the minimum possible friction.
+No `SeedDictionary` class, no `Dimension` dataclass, no registry. Researchers working on domain-agnostic concepts should not have to import and subclass anything to experiment with a new seed set. Editing a dict in a notebook is the minimum possible friction.
 
-The RFS 2021 paper uses five culture dimensions with 47 seed words. The RFS 2026 follow-up uses six different types. The package stays useful across both because the seed shape is the same plain dict.
+The 2021 paper's 5-dim culture dictionary is shipped as a named example via `load_example_seeds("culture_2021")`. It is opt-in and clearly tagged as a reproduction artifact, never the default. The package stays useful across both that paper and the 2026 follow-up's 6-type taxonomy because the seed shape is the same plain dict.
 
 ---
 

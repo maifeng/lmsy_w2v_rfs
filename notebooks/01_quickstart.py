@@ -14,33 +14,74 @@
 # %% [markdown]
 # # lmsy_w2v_rfs: Quickstart
 #
-# This notebook reproduces the five-dimension corporate-culture measurement
-# from Li, Mai, Shen, Yan (2021, *Review of Financial Studies*) on 2,000
-# Glassdoor culture reviews. No Java required.
+# Word-embedding seed expansion and document scoring. Bring your own seed
+# words; the package trains Word2Vec on your corpus, expands each
+# dimension's seed list via nearest-neighbor search, and scores every
+# document on every dimension.
+#
+# Originally a port of the corporate-culture method in Li, Mai, Shen,
+# Yan (2021, *RFS*). The package is theory-agnostic: any
+# concept that fits "a list of seed words" works.
 #
 # **Paper:** https://doi.org/10.1093/rfs/hhaa079
 #
-# **Corpus**: 2,000 Glassdoor "pros" reviews about corporate culture,
-# sampled from the RFS 2026 validation dataset. The same corpus is used
-# across all three workshop notebooks for comparability.
+# **Demo corpus**: 2,000 Glassdoor "pros" reviews (sampled from the RFS
+# 2026 validation dataset). The same corpus is used across all three
+# workshop notebooks for comparability.
 
 # %% [markdown]
 # ## 1. Install and download the corpus
+#
+# **Colab quick test (TestPyPI build):** run the install cell below, then upload
+# `glassdoor_culture_2000.csv` via Colab's file pane (or `files.upload()`).
 
 # %%
-# !pip install -q lmsy_w2v_rfs    # uncomment and run in Colab
+# Colab: install from TestPyPI. Uncomment and run.
+# !pip install -q --index-url https://test.pypi.org/simple/ \
+#     --extra-index-url https://pypi.org/simple/ -U lmsy_w2v_rfs
 
 # %%
-# Download the shared workshop corpus (uncomment in Colab):
-# !wget -q https://raw.githubusercontent.com/maifeng/culture-llm-workshop/main/data/glassdoor_culture_2000.csv
+# Colab: upload glassdoor_culture_2000.csv from your laptop. Uncomment and run.
+# from google.colab import files
+# files.upload()
 
 # %% [markdown]
-# ## 2. Load the corpus
+# ## 2. Define your seeds
+#
+# This is the only place where you tell the package what to measure. Any
+# mapping of dimension name to a list of seed words works. The cell below
+# uses the 2021 paper's five culture dimensions; replace with your own
+# constructs (CVF, ESG, risk vs growth, anything word-list-shaped).
+
+# %%
+seeds = {
+    "integrity":  ["integrity", "ethic", "ethical", "honest", "honesty",
+                   "accountable", "trust", "responsibility", "transparency"],
+    "teamwork":   ["teamwork", "collaboration", "collaborate", "cooperate",
+                   "cooperation", "collaborative"],
+    "innovation": ["innovation", "innovate", "innovative", "creative",
+                   "creativity", "passion", "excellence"],
+    "respect":    ["respect", "respectful", "dignity", "empower",
+                   "empowerment", "talent"],
+    "quality":    ["quality", "customer", "dedication", "dedicate"],
+}
+
+# %% [markdown]
+# **Reproducing the 2021 paper exactly?** The original 47-seed dictionary
+# is shipped as a named example:
+#
+# ```python
+# from lmsy_w2v_rfs import load_example_seeds
+# seeds = load_example_seeds("culture_2021")
+# ```
+
+# %% [markdown]
+# ## 3. Load the corpus
 
 # %%
 import os
 import pandas as pd
-from lmsy_w2v_rfs import Config, Pipeline, CULTURE_DIMS
+from lmsy_w2v_rfs import Config, Pipeline
 
 CORPUS_PATH = "glassdoor_culture_2000.csv"
 if not os.path.exists(CORPUS_PATH):
@@ -53,18 +94,18 @@ print(f"Corpus: {len(texts)} reviews, {corpus['firm_id'].nunique()} firms")
 corpus[["review_id", "text"]].head(3)
 
 # %% [markdown]
-# ## 3. Configure the pipeline
+# ## 4. Configure the pipeline
 #
-# Setting `preprocessor="none"` skips Java/CoreNLP entirely. The gensim
-# Phrases pass still learns corpus-specific bigrams and trigrams.
+# `preprocessor="none"` skips Java/CoreNLP entirely. The gensim Phrases
+# pass still learns corpus-specific bigrams and trigrams.
 #
-# With 2,000 reviews (~385 chars each) we can train a useful Word2Vec
-# model. We use 100-dim vectors and expand to 50 words per dimension,
-# which works well for a corpus of this size. For a full earnings-call
-# corpus (100k+ documents), use the defaults: 300-dim, 500 expanded words.
+# With 2,000 short reviews we use 100-dim vectors and expand to 50 words
+# per dimension. For a full earnings-call corpus (100k+ documents), the
+# defaults (300-dim, 500 expanded words) work better.
 
 # %%
 cfg = Config(
+    seeds=seeds,
     preprocessor="none",
     use_gensim_phrases=True,
     phrase_passes=2,
@@ -79,48 +120,60 @@ cfg = Config(
 cfg
 
 # %% [markdown]
-# ## 4. Run the pipeline
+# ## 5. Run the pipeline
 #
-# `Pipeline.run()` executes five stages in order:
-#
-# 1. **Parse**: tokenize and (optionally) lemmatize + NER-mask the corpus.
-# 2. **Clean**: lowercase, remove stopwords and short tokens.
-# 3. **Phrase**: learn bigrams/trigrams via gensim Phrases.
-# 4. **Train**: fit a Word2Vec model on the cleaned corpus.
-# 5. **Expand + Score**: for each dimension, find the nearest neighbors of
-#    the seed words in vector space, then score every document by weighted
-#    term frequency against the expanded dictionary.
-#
-# On 2,000 reviews with `preprocessor="none"`, this takes about 15-30
-# seconds on a laptop CPU or Colab instance.
+# `Pipeline.run()` executes five stages: parse, clean, phrase, train,
+# expand+score. On 2,000 reviews this takes 15-30 seconds on a laptop or
+# Colab CPU.
 
 # %%
 p = Pipeline(texts=texts, doc_ids=doc_ids, work_dir="runs/glassdoor", config=cfg)
 p.run()
 
 # %% [markdown]
-# ## 5. Inspect the expanded dictionary
+# ## 6. Inspect the expanded dictionary
 #
-# Starting from the seed words (e.g., "integrity", "honesty", "ethic"),
-# Word2Vec nearest-neighbor search surfaces corpus-specific terms that the
-# researcher did not hand-pick. This is the core contribution of the method.
-# Look for terms that capture how Glassdoor reviewers actually talk about
-# each culture dimension.
+# `show_dictionary` prints seeds and the top-K expanded words per
+# dimension. `dictionary_preview` returns the same content as a DataFrame
+# for notebook display.
 
 # %%
-for dim in CULTURE_DIMS:
-    seeds = cfg.seeds[dim][:3]
-    expanded = p.culture_dict[dim][:10]
-    print(f"\n--- {dim} ---")
-    print(f"  Seeds:    {seeds}")
-    print(f"  Expanded: {expanded}")
+p.show_dictionary(top_k=10)
+
+# %%
+p.dictionary_preview(top_k=10)
 
 # %% [markdown]
-# ## 6. Inspect scores
+# ## 7. Curate the dictionary (optional)
 #
-# Each column is a culture dimension. Higher values mean the document uses
-# more words from that dimension's expanded dictionary. The scoring variant
-# below is TF-IDF weighted.
+# Word2Vec expansion picks up corpus-specific terms but also surfaces
+# noise. The 2021 paper's authors manually inspected and edited the
+# dictionary before scoring. You can do this two ways:
+#
+# **Programmatic** (replicable, in notebook):
+#
+# ```python
+# p.edit_dictionary(
+#     remove={"integrity": ["fantastic", "build"]},
+#     add={"integrity": ["accountable"]},
+# )
+# ```
+#
+# **Spreadsheet** (faster for big dicts): open `p.dict_path` in
+# Excel/CSV editor, edit, save, then call `p.reload_dictionary()`.
+#
+# Both paths update both the in-memory dict and the on-disk CSV. After
+# curation, call `p.score()` again to rescore with the curated
+# dictionary.
+
+# %%
+# Example: remove a noisy expansion candidate from "integrity".
+# p.edit_dictionary(remove={"integrity": ["fantastic"]})
+# p.score()  # rescore against the curated dict
+# p.show_dictionary(top_k=10)
+
+# %% [markdown]
+# ## 8. Inspect scores
 
 # %%
 scores = p.score_df("TFIDF")
@@ -131,12 +184,12 @@ scores.to_csv("w2v_glassdoor_scores.csv", index=False)
 print("Saved to w2v_glassdoor_scores.csv")
 
 # %% [markdown]
-# ## 7. Merge scores with metadata
+# ## 9. Merge scores with metadata
 #
-# Since we scored the same corpus used by the other two notebooks, we can
-# merge the five culture scores with Glassdoor metadata and look for
-# patterns. For example, do reviews with higher "integrity" scores also
-# have higher culture ratings?
+# Since we scored the same corpus used by the other two workshop
+# notebooks, we can merge the dimension scores with Glassdoor metadata
+# and look for patterns. For example, do reviews with higher "teamwork"
+# scores also have higher culture ratings?
 
 # %%
 merged = corpus[["review_id", "firm_id", "year", "rating_culture"]].copy()
@@ -145,34 +198,34 @@ id_col = [c for c in scores.columns if c.lower() == "doc_id"][0]
 merged = merged.merge(scores, left_on="review_id", right_on=id_col, how="inner")
 
 print("Correlation of each dimension with rating_culture:")
-for dim in CULTURE_DIMS:
+for dim in cfg.dims:
     if dim in merged.columns:
         r = merged[dim].corr(merged["rating_culture"])
         print(f"  {dim:12s}: {r:+.3f}")
 print(f"\nNon-zero score rates (short reviews have sparse dictionaries):")
-for dim in CULTURE_DIMS:
+for dim in cfg.dims:
     if dim in merged.columns:
         nz = (merged[dim] > 0).mean()
         print(f"  {dim:12s}: {nz:.0%} of reviews")
 
 # %% [markdown]
-# ## 8. Compare scoring methods
+# ## 10. Compare scoring methods
 #
 # The pipeline supports three scoring variants: raw term frequency (TF),
 # TF-IDF, and weighted-frequency IDF (WFIDF). The choice rarely changes
-# the ranking but affects the scale of the scores.
+# the ranking but affects the scale.
 
 # %%
 for method in ("TF", "TFIDF", "WFIDF"):
     s = p.score_df(method)
-    print(f"{method:8s} mean integrity = {s['integrity'].mean():.4f}")
+    print(f"{method:8s} mean {cfg.dims[0]} = {s[cfg.dims[0]].mean():.4f}")
 
 # %% [markdown]
-# ## 9. Bring your own seeds
+# ## 11. Bring your own seeds (custom dimensions)
 #
-# Any concept that fits "a list of words" works. Here is a two-dimension
-# "risk vs growth" dictionary. You can define any dimensions relevant to
-# your research question.
+# Same pipeline, different seeds. Below: a two-dimension "risk vs
+# growth" dictionary. Define any dimensions relevant to your research
+# question and rerun.
 
 # %%
 my_cfg = cfg.with_(seeds={
@@ -184,12 +237,13 @@ print("Custom dimensions:", my_cfg.dims)
 # %%
 p_custom = Pipeline(texts=texts, doc_ids=doc_ids, work_dir="runs/custom", config=my_cfg)
 p_custom.run(methods=("TFIDF",))
+p_custom.show_dictionary(top_k=10)
 p_custom.score_df("TFIDF").head()
 
 # %% [markdown]
-# ## 10. Citation
+# ## 12. Citation
 #
-# If you use this package in research, please cite:
+# If you use this package in research, please cite the origin paper:
 #
 # ```
 # Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan. 2021.
@@ -203,7 +257,7 @@ import lmsy_w2v_rfs
 print(lmsy_w2v_rfs.__paper__)
 
 # %% [markdown]
-# ## 11. Related packages
+# ## 13. Related packages
 #
 # This workshop covers three tools on the **same 2,000 Glassdoor reviews**.
 # Pick the one that fits your research question:
@@ -212,4 +266,4 @@ print(lmsy_w2v_rfs.__paper__)
 # |---|---|---|
 # | **`lmsyz_genai_ie_rfs`** | Structured extraction: culture type, causes, consequences, causal triples | Requires an LLM API key |
 # | **`spar_measure`** | Scoring short texts on a custom semantic scale (e.g., CVF dimensions) | Local CPU/GPU, no API key |
-# | **`lmsy_w2v_rfs`** (this notebook) | Historical, deterministic 5-dimension culture scores from word2vec | Local CPU, no API key |
+# | **`lmsy_w2v_rfs`** (this notebook) | Word-list-driven scoring with corpus-trained Word2Vec expansion | Local CPU, no API key |

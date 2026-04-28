@@ -40,11 +40,10 @@ WFC_2024Q1,"We are pleased to report record integrity..."
 Supported input formats are covered in the [Load your documents](load-documents.md)
 how-to: CSV, JSONL, directory of files, one-document-per-line text.
 
-### 3. Prepare your seed dictionary (optional)
+### 3. Prepare your seed dictionary (REQUIRED)
 
-Omit this and the CLI uses the 2021 paper's five culture dimensions. If
-you want your own concepts, write a plain text file (easiest for hand
-editing):
+`--seeds` is required. The package is theory-agnostic. Write a plain
+text file (easiest for hand editing):
 
 ```
 # my_seeds.txt

@@ -52,26 +52,31 @@ log = logging.getLogger(__name__)
 
 
 class Pipeline:
-    """End-to-end Word2Vec culture-measurement pipeline.
+    """End-to-end seed-expansion measurement pipeline.
 
     Typical usage::
 
-        from lmsy_w2v_rfs import Pipeline, Config, CULTURE_SEEDS
+        from lmsy_w2v_rfs import Pipeline, Config
 
+        seeds = {
+            "risk":   ["risk", "uncertainty", "volatility"],
+            "growth": ["growth", "expansion", "scale"],
+        }
         p = Pipeline(
             texts=my_texts,
             doc_ids=my_ids,
             work_dir="runs/demo",
-            config=Config(use_corenlp=False),
+            config=Config(seeds=seeds, preprocessor="none"),
         )
         p.run()
+        p.show_dictionary(top_k=10)
         scores = p.score_df("TFIDF")
 
     Attributes:
         texts: Raw document strings.
         doc_ids: Matching IDs.
         work_dir: Directory for all intermediate and output files.
-        config: Hyperparameters.
+        config: Hyperparameters. Required.
     """
 
     def __init__(
@@ -82,7 +87,13 @@ class Pipeline:
         work_dir: str | Path = "runs",
         config: Config | None = None,
     ) -> None:
-        self.config = config or Config()
+        if config is None:
+            raise ValueError(
+                "Pipeline requires config=Config(seeds=...). "
+                "Pass a Config built with your own seed dictionary, e.g. "
+                'Config(seeds={"risk": ["risk", ...], "growth": [...]}).'
+            )
+        self.config = config
         self.work_dir = Path(work_dir)
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self._texts: list[str] | None = list(texts) if texts is not None else None
@@ -406,11 +417,21 @@ class Pipeline:
 
     @property
     def culture_dict(self) -> dict[str, list[str]]:
-        """The expanded dictionary, rank-sorted."""
+        """The expanded dictionary, rank-sorted.
+
+        Alias for ``expanded_dict``; kept for compatibility with prose
+        from the 2021 paper. The returned dict is the SAME object held
+        on the pipeline; mutating it mutates pipeline state.
+        """
         if self._culture_dict is None:
             self.expand_dictionary()
         assert self._culture_dict is not None
         return self._culture_dict
+
+    @property
+    def expanded_dict(self) -> dict[str, list[str]]:
+        """The expanded dictionary, rank-sorted, theory-agnostic name."""
+        return self.culture_dict
 
     @property
     def w2v(self) -> Word2Vec:
@@ -419,6 +440,137 @@ class Pipeline:
             self.train()
         assert self._w2v_model is not None
         return self._w2v_model
+
+    # ---------- inspection + manual curation -------------------------
+
+    def dictionary_preview(self, top_k: int = 10) -> pd.DataFrame:
+        """Return a per-dimension preview of the expanded dictionary.
+
+        Useful for notebook display: rendering the returned DataFrame
+        shows seeds and the top-``top_k`` expanded words side by side.
+
+        Args:
+            top_k: How many expanded words to show per dimension.
+
+        Returns:
+            A DataFrame with one row per dimension and columns
+            ``dimension``, ``seeds``, ``expanded_top_k``, ``n_expanded``.
+        """
+        d = self.culture_dict
+        rows = []
+        for dim in self.config.dims:
+            words = d.get(dim, [])
+            seed_words = list(self.config.seeds.get(dim, []))
+            rows.append(
+                {
+                    "dimension": dim,
+                    "seeds": ", ".join(seed_words),
+                    "expanded_top_k": ", ".join(words[:top_k]),
+                    "n_expanded": len(words),
+                }
+            )
+        return pd.DataFrame(rows)
+
+    def show_dictionary(self, top_k: int = 10) -> None:
+        """Pretty-print the expanded dictionary, dimension by dimension.
+
+        Replaces the boilerplate ``for dim in DIMS: print(...)`` loop.
+        Prints seeds with an in-vocab marker and the top-``top_k``
+        expanded words for each dimension.
+
+        Args:
+            top_k: How many expanded words to show per dimension.
+        """
+        d = self.culture_dict
+        vocab = self._w2v_model.wv.key_to_index if self._w2v_model is not None else None
+        for dim in self.config.dims:
+            seed_words = list(self.config.seeds.get(dim, []))
+            if vocab is not None:
+                seed_strs = [s if s in vocab else f"{s} (oov)" for s in seed_words]
+            else:
+                seed_strs = seed_words
+            words = d.get(dim, [])
+            print(f"\n=== {dim} ({len(words)} words) ===")
+            print(f"  seeds:    {', '.join(seed_strs)}")
+            print(f"  expanded: {', '.join(words[:top_k])}")
+
+    def edit_dictionary(
+        self,
+        remove: dict[str, Iterable[str]] | None = None,
+        add: dict[str, Iterable[str]] | None = None,
+    ) -> dict[str, list[str]]:
+        """Manually curate the expanded dictionary.
+
+        The 2021 paper allowed researchers to drop noisy expansion
+        candidates (and occasionally append domain words the model
+        missed) before scoring. This method does both atomically:
+        in-memory dict and on-disk CSV are updated together.
+
+        Use programmatically from a notebook, or pair with
+        :meth:`reload_dictionary` to drive curation from a spreadsheet.
+
+        Args:
+            remove: Mapping of dimension name to words to drop. Words
+                not present are silently ignored.
+            add: Mapping of dimension name to words to append (at the
+                end, after existing rank-sorted entries). Duplicates
+                within a dimension are deduped.
+
+        Returns:
+            The updated dict.
+
+        Raises:
+            KeyError: If a referenced dimension is not in
+                ``config.seeds``.
+        """
+        if self._culture_dict is None:
+            self.expand_dictionary()
+        assert self._culture_dict is not None
+
+        known = set(self.config.dims)
+        for source in (remove or {}, add or {}):
+            for dim in source:
+                if dim not in known:
+                    raise KeyError(
+                        f"Unknown dimension {dim!r}. Known: {sorted(known)}."
+                    )
+
+        for dim, words in (remove or {}).items():
+            drop = set(words)
+            self._culture_dict[dim] = [w for w in self._culture_dict[dim] if w not in drop]
+
+        for dim, words in (add or {}).items():
+            existing = list(self._culture_dict[dim])
+            seen = set(existing)
+            for w in words:
+                if w not in seen:
+                    existing.append(w)
+                    seen.add(w)
+            self._culture_dict[dim] = existing
+
+        write_dict_csv(self._culture_dict, self.dict_path)
+        # Drop any cached scores; they were computed against the old dict.
+        self._scores.clear()
+        return self._culture_dict
+
+    def reload_dictionary(self) -> dict[str, list[str]]:
+        """Reread the dictionary CSV from disk.
+
+        Use this after editing ``pipeline.dict_path`` in a spreadsheet
+        or text editor. Cached scores are dropped because they were
+        computed against the previous dict.
+
+        Returns:
+            The reloaded dict.
+        """
+        if not self.dict_path.exists():
+            raise FileNotFoundError(
+                f"No dictionary CSV at {self.dict_path}. "
+                "Run .expand_dictionary() first."
+            )
+        self._culture_dict, _ = read_dict_csv(self.dict_path)
+        self._scores.clear()
+        return self._culture_dict
 
     def _dump_config(self) -> None:
         try:

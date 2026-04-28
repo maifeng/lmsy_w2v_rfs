@@ -50,11 +50,12 @@ def test_zca_whiten_handles_tiny_sample() -> None:
     pd.testing.assert_frame_equal(out, df)
 
 
-def test_pipeline_applies_zca_when_configured(tiny_corpus, work_dir) -> None:
+def test_pipeline_applies_zca_when_configured(tiny_corpus, work_dir, culture_seeds) -> None:
     from lmsy_w2v_rfs import Config, Pipeline
 
     ids = [f"d{i}" for i in range(len(tiny_corpus))]
     cfg = Config(
+        seeds=culture_seeds,
         preprocessor="none", mwe_list=None,
         w2v_dim=20, w2v_epochs=3, w2v_min_count=1,
         phrase_min_count=2, phrase_threshold=1.0,
