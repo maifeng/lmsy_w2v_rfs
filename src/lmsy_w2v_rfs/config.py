@@ -41,7 +41,7 @@ def _load_stopwords() -> set[str]:
 
 
 STOPWORDS_SRAF: set[str] = _load_stopwords()
-"""120-token generic stopword list from Notre Dame SRAF."""
+"""121-token generic stopword list from Notre Dame SRAF."""
 
 
 def load_example_seeds(name: str) -> dict[str, list[str]]:
@@ -228,18 +228,30 @@ def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]
         {"integrity": ["integrity", "ethic", "honest"],
          "teamwork":  ["teamwork", "collaborate", "cooperate"]}
 
-    **JSON file** (path ending in ``.json``)::
+    **JSON file, flat** (path ending in ``.json``)::
 
         {
           "integrity": ["integrity", "ethic", "honest"],
           "teamwork":  ["teamwork", "collaborate", "cooperate"]
         }
 
+    **JSON file, wrapped** (has a ``"seeds"`` key whose value is the dict).
+    Used by the bundled example files (``seeds_culture.json``) which carry
+    extra metadata alongside the seeds::
+
+        {
+          "_paper": "Li et al. 2021",
+          "seeds": {
+            "integrity": ["integrity", "ethic", "honest"],
+            "teamwork":  ["teamwork", "collaborate", "cooperate"]
+          }
+        }
+
     **Text file** (anything else). One dimension per line, name and words
     separated by a colon, words by whitespace or commas. Blank lines and
     ``#`` comments are skipped::
 
-        # culture dimensions
+        # my dimensions
         integrity: integrity ethic ethical honest
         teamwork:  teamwork, collaboration, cooperate
         innovation: innovation innovate creative
@@ -252,7 +264,7 @@ def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]
 
     Raises:
         FileNotFoundError: If ``source`` is a path that does not exist.
-        ValueError: If the JSON file is not a ``dict[str, list[str]]``.
+        ValueError: If the JSON file is not a valid seed mapping.
         TypeError: If ``source`` is ``None``.
     """
     import json
@@ -272,14 +284,22 @@ def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]
 
     if path.suffix.lower() == ".json":
         data = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict) or not all(
-            isinstance(k, str) and isinstance(v, list) for k, v in data.items()
-        ):
+        if not isinstance(data, dict):
             raise ValueError(
                 f"Seeds JSON file {path} must be a dict of "
                 f"str -> list[str]. Got: {type(data).__name__}"
             )
-        return {k: [str(x) for x in v] for k, v in data.items()}
+        # Handle wrapped format: {"seeds": {...}, "_paper": ..., ...}
+        if "seeds" in data and isinstance(data["seeds"], dict):
+            flat = data["seeds"]
+        else:
+            flat = data
+        if not all(isinstance(k, str) and isinstance(v, list) for k, v in flat.items()):
+            raise ValueError(
+                f"Seeds JSON file {path} must be a dict of "
+                f"str -> list[str]. Got unexpected value types."
+            )
+        return {k: [str(x) for x in v] for k, v in flat.items()}
 
     # Plain text: "dim: word1 word2 word3" per line.
     out: dict[str, list[str]] = {}

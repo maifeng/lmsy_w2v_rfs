@@ -205,5 +205,5 @@ your corpus is millions of long documents:
 - Word2Vec training needs the full corpus once; use a sharded training run
   only after preprocessing all shards.
 
-For the workshop scale (thousands to tens of thousands of documents),
-memory is never the issue.
+For small to mid-sized corpora (thousands to tens of thousands of documents),
+memory is rarely the issue.

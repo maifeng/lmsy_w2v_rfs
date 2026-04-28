@@ -25,7 +25,7 @@ from lmsy_w2v_rfs import (
     Config,              # frozen dataclass of hyperparameters; seeds= required
     load_seeds,          # read dict / .json / .txt -> dict[str, list[str]]
     load_example_seeds,  # opt-in named examples ("culture_2021")
-    STOPWORDS_SRAF,      # 120-token SRAF generic stopword list
+    STOPWORDS_SRAF,      # 121-token SRAF generic stopword list
     download_corenlp,    # optional, needs the [corenlp] extra
 )
 ```
@@ -92,7 +92,7 @@ test suite proves this.
 
 ```
 src/lmsy_w2v_rfs/data/
-├── seeds_culture.json       # 5 dims, 47 seeds, loaded at import
+├── seeds_culture.json       # 5 dims, 47 seeds, opt-in via load_example_seeds
 └── stopwords_sraf.txt       # 121-token SRAF list
 ```
 

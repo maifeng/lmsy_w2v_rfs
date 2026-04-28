@@ -1,6 +1,6 @@
 # Word2Vec dictionary
 
-The 2021 paper's central trick: a small seed dictionary gets expanded into a much larger culture dictionary by querying the trained Word2Vec model for near neighbors. The output is a rank-sorted list of words per concept, written to `outputs/expanded_dict.csv` under `work_dir`.
+The core technique: a small seed dictionary gets expanded into a much larger concept dictionary by querying the trained Word2Vec model for near neighbors. The output is a rank-sorted list of words per concept, written to `outputs/expanded_dict.csv` under `work_dir`.
 
 ---
 
@@ -22,13 +22,15 @@ flowchart LR
 
 ## One dimension, step by step
 
-Take the packaged `integrity` seeds: `integrity`, `ethic`, `ethical`, `accountable`, `accountability`, `trust`, `honesty`, `honest`, `honestly`, `fairness`, `responsibility`, `responsible`, `transparency`, `transparent` (14 total). After Word2Vec training:
+The example below uses the bundled culture seeds; substitute your own dimensions as needed.
+
+Take the `integrity` seeds from `load_example_seeds("culture_2021")`: `integrity`, `ethic`, `ethical`, `accountable`, `accountability`, `trust`, `honesty`, `honest`, `honestly`, `fairness`, `responsibility`, `responsible`, `transparency`, `transparent` (14 total). After Word2Vec training:
 
 1. **Average the vectors.** Look up each seed in `w2v.wv.key_to_index`. Seeds missing from the vocabulary are silently skipped. The remaining vectors are averaged into a 300-dimensional "integrity prototype."
 2. **Query near neighbors.** Call `w2v.wv.most_similar(positive=[mean_vec], topn=n_words_dim)` with `n_words_dim=500` by default. The result is a list of `(word, cosine)` pairs. `Config.dict_restrict_vocab` can cap the search to the top fraction of the vocabulary by frequency; `Config.min_similarity` trims the tail below a cosine threshold.
 3. **Strip NER placeholders.** Any `[ner:*]` token that leaked through is filtered before the dictionary is written.
 
-Do the same for `teamwork`, `innovation`, `respect`, and `quality`, and you have five candidate lists of up to 500 words each.
+Do the same for `teamwork`, `innovation`, `respect`, and `quality` (the other four bundled dimensions), and you have five candidate lists of up to 500 words each. With your own seeds, you define as many dimensions as you need.
 
 ## Cross-dimension deduplication
 
@@ -40,9 +42,9 @@ Once each word has a single home dimension, `rank_by_similarity` sorts the membe
 
 ---
 
-## A concrete example from the paper's seeds
+## A concrete example from the bundled seeds
 
-For a Word2Vec trained on earnings-call transcripts with the default 47 seeds, a typical `integrity` expansion looks like:
+For a Word2Vec trained on earnings-call transcripts with the 47 seeds from `load_example_seeds("culture_2021")`, a typical `integrity` expansion looks like:
 
 ```
 integrity, accountable, ethical, transparent, accountability,

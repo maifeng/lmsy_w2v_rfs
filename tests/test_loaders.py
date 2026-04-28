@@ -75,6 +75,38 @@ def test_load_seeds_file_not_found() -> None:
         load_seeds("/nonexistent/seeds.json")
 
 
+def test_load_seeds_wrapped_json_format(tmp_path: Path) -> None:
+    """load_seeds should unwrap {"seeds": {...}} format (as used by bundled files)."""
+    path = tmp_path / "wrapped.json"
+    path.write_text(
+        json.dumps({
+            "_paper": "Li et al. 2021",
+            "_doi": "10.1093/rfs/hhaa079",
+            "seeds": {
+                "integrity": ["integrity", "ethic", "honest"],
+                "teamwork": ["teamwork", "collaborate"],
+            },
+        }),
+        encoding="utf-8",
+    )
+    seeds = load_seeds(path)
+    assert set(seeds.keys()) == {"integrity", "teamwork"}
+    assert seeds["integrity"] == ["integrity", "ethic", "honest"]
+
+
+def test_load_seeds_bundled_culture_file() -> None:
+    """load_seeds should work on the bundled seeds_culture.json wrapped file."""
+    from lmsy_w2v_rfs import load_example_seeds
+    from importlib import resources
+
+    # Get path to the bundled file and pass it to load_seeds.
+    with resources.as_file(
+        resources.files("lmsy_w2v_rfs.data").joinpath("seeds_culture.json")
+    ) as p:
+        seeds = load_seeds(p)
+    assert set(seeds.keys()) == {"integrity", "teamwork", "innovation", "respect", "quality"}
+
+
 # ----- Pipeline factories -----------------------------------------------
 
 

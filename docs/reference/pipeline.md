@@ -1,9 +1,9 @@
 # Pipeline
 
-`Pipeline` is the end-to-end orchestrator for the RFS 2021 culture-measurement
-workflow. It wraps six stages behind a single class and writes every intermediate
-artifact under `work_dir`, so reruns skip any stage whose outputs already exist
-unless `force=True` is passed.
+`Pipeline` is the end-to-end orchestrator for the Word2Vec dictionary expansion
+and scoring workflow. It wraps six stages behind a single class and writes every
+intermediate artifact under `work_dir`, so reruns skip any stage whose outputs
+already exist unless `force=True` is passed.
 
 The six stages:
 

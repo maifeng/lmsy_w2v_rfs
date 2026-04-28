@@ -1,4 +1,4 @@
-# Seed words expansion and measurements using Word2Vec (Li, Mai, Shen, Yan 2021 RFS)
+# `lmsy_w2v_rfs` — Word2Vec dictionary expansion and scoring for any seed-based vocabulary
 
 [![Open in Colab](https://img.shields.io/badge/Colab-quickstart-orange?logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb)
 [![PyPI version](https://img.shields.io/pypi/v/lmsy_w2v_rfs.svg)](https://pypi.org/project/lmsy_w2v_rfs/)
@@ -11,9 +11,7 @@ Builds a **corpus-specific measurement dictionary with Word2Vec**. For each conc
 - **You curate** the dictionary: inspect, drop noise, add domain words.
 - **The package scores** every document by weighted hits against the curated dictionary.
 
-If you find this library useful in your research, please cite:
-
-Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), "Measuring Corporate Culture Using Machine Learning," *Review of Financial Studies* 34(7):3265-3315, [doi.org/10.1093/rfs/hhaa079](https://doi.org/10.1093/rfs/hhaa079).
+Cite as: Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), *RFS* 34(7):3265-3315. Full citation at the bottom.
 
 ---
 
@@ -104,7 +102,7 @@ The package implements the four-step construction procedure of Li et al. (2021).
 
 Phrases carry meaning that single words cannot. The package extracts them in two complementary steps targeting different kinds of phrases.
 
-**Step 1a, parser-based (general-English phrases).** A dependency parser identifies fixed multiword expressions (`with_respect_to`, `rather_than`) and compound words (`intellectual_property`, `healthcare_provider`). The parser also lemmatizes (`stocks` → `stock`) and masks named entities as `[NER:ORG]` placeholders so proper nouns do not bias the vector space. The 120-token SRAF generic stopword list is removed in the cleaning pass that follows.
+**Step 1a, parser-based (general-English phrases).** A dependency parser identifies fixed multiword expressions (`with_respect_to`, `rather_than`) and compound words (`intellectual_property`, `healthcare_provider`). The parser also lemmatizes (`stocks` → `stock`) and masks named entities as `[NER:ORG]` placeholders so proper nouns do not bias the vector space. The 121-token SRAF generic stopword list is removed in the cleaning pass that follows.
 
 | `Config(preprocessor=...)` | Backend | Needs |
 |---|---|---|
@@ -114,10 +112,14 @@ Phrases carry meaning that single words cannot. The package extracts them in two
 | `"static"` | NLTK `MWETokenizer` over a curated list | base install |
 | `"none"` | whitespace tokenize, lowercase only | base install |
 
-**Step 1b, statistical (corpus-specific phrases).** After Step 1a, gensim's `Phrases` scans the parsed corpus for statistically significant adjacent-token co-occurrences and joins them with `_`. A second pass over the bigram-joined corpus learns trigrams. This step identifies recurring collocations specific to the corpus: an earnings-call corpus surfaces `forward_looking_statement` and `cost_of_capital`; a Glassdoor-review corpus surfaces `work_life_balance` and `toxic_environment`.
+**Step 1b, statistical (corpus-specific phrases).** After Step 1a, gensim's `Phrases` scans the parsed corpus for statistically significant adjacent-token co-occurrences and joins them with `_`. A second pass over the bigram-joined corpus learns trigrams. This step identifies recurring collocations specific to the corpus: an earnings-call corpus surfaces `forward_looking_statement` and `cost_of_capital`; a product-review corpus surfaces `customer_service` and `delivery_time`; a Glassdoor corpus surfaces `work_life_balance` and `growth_opportunity`.
 
 ```python
+from lmsy_w2v_rfs import Config, load_example_seeds
+
+seeds = load_example_seeds("culture_2021")  # or any dict[str, list[str]]
 Config(
+    seeds=seeds,
     use_gensim_phrases=True,
     phrase_passes=2,            # 1 = bigrams; 2 = bigrams + trigrams
     phrase_min_count=10,        # works on a ~270k-doc corpus
@@ -132,7 +134,10 @@ The phrase-tagged corpus is written to `work_dir/corpora/pass2.txt` and can be o
 `Pipeline.train()` fits a `gensim.models.Word2Vec` on the phrase-tagged corpus. Every word and phrase receives a 300-dimensional vector. Defaults match the 2021 paper:
 
 ```python
-Config(w2v_dim=300, w2v_window=5, w2v_min_count=5, w2v_epochs=20)
+from lmsy_w2v_rfs import Config, load_example_seeds
+
+seeds = load_example_seeds("culture_2021")  # or any dict[str, list[str]]
+Config(seeds=seeds, w2v_dim=300, w2v_window=5, w2v_min_count=5, w2v_epochs=20)
 ```
 
 The model is saved at `work_dir/models/w2v.mod` and is available as `p.w2v` for ad-hoc queries.
@@ -222,30 +227,7 @@ CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv 
 
 Once parsing finishes, downstream stages stream through disk: `clean` reads parsed sentences line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The bottleneck is the **input stage**: the document loader holds the corpus in a Python list before parsing begins.
 
-A scaling-friendly input format is **one document per line in a single file**, with an optional parallel IDs file. 
-
-```python
-from lmsy_w2v_rfs import Pipeline, Config, load_seeds
-
-# transcripts.txt: one document per line. transcript_ids.txt: matching IDs.
-p = Pipeline.from_text_file(
-    "/data/transcripts.txt",
-    id_path="/data/transcript_ids.txt",
-    work_dir="runs/big",
-    config=Config(
-        seeds=load_seeds("my_seeds.txt"),
-        preprocessor="spacy",                   # or "corenlp" for paper-faithful
-        n_cores=8,
-    ),
-)
-p.run()
-```
-
-If `id_path` is omitted, IDs are generated as line numbers (`"0"`, `"1"`, ...).
-
-**For corpora that exceed RAM** (tens of millions of long documents), pre-split `transcripts.txt` into shards (`split -l 100000 transcripts.txt shard_`), run `parse` separately per shard, concatenate each shard's `parsed/sentences.txt` and `parsed/sentence_ids.txt` into a merged `work_dir`, then run `clean`, `phrase`, `train`, `expand_dictionary`, and `score` once on the merged corpus. The stage methods read from disk and are idempotent, so this kind of manual orchestration works without subclassing.
-
-For smaller corpora (a few thousand to a hundred thousand documents), `Pipeline.from_directory(...)`, `Pipeline.from_csv(...)`, and `Pipeline.from_dataframe(...)` are convenient. They all materialize the corpus in memory at construction.
+For corpora beyond a few hundred thousand documents, or when running on a cluster, see the [Run on HPC how-to](docs/how-to/run-on-hpc.md) for the multi-shard workflow, SLURM and SGE templates, and BLAS thread-cap instructions.
 
 ---
 
@@ -283,7 +265,7 @@ Config(
 
     # Scoring (extensions beyond the 2021 paper)
     tfidf_normalize=False,
-    zca_whiten=False,                  # ZCA-decorrelate the concept columns
+    zca_whiten=False,                  # ZCA-decorrelate the concept columns; see docs/how-to/whiten-scores.md
     zca_epsilon=1e-6,
 
     random_state=42,
@@ -294,6 +276,10 @@ Config(
 
 ## Citation
 
+If you use this package in your research, please cite the paper this implementation is based on:
+
+Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), "Measuring Corporate Culture Using Machine Learning," *Review of Financial Studies* 34(7):3265-3315, [doi.org/10.1093/rfs/hhaa079](https://doi.org/10.1093/rfs/hhaa079).
+
 ```bibtex
 @article{li2021measuring,
   title={Measuring Corporate Culture Using Machine Learning},
@@ -303,6 +289,11 @@ Config(
   doi={10.1093/rfs/hhaa079}
 }
 ```
+
+## Links
+
+- GitHub: [github.com/maifeng/lmsy_w2v_rfs](https://github.com/maifeng/lmsy_w2v_rfs)
+- PyPI: [pypi.org/project/lmsy_w2v_rfs](https://pypi.org/project/lmsy_w2v_rfs/)
 
 ## License
 

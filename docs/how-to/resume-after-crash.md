@@ -116,7 +116,7 @@ One sentence per file:
 | `phrase` | `cleaned/sentences.txt` | `corpora/pass{1,2}.txt`, `models/phrases_pass{1,2}.pkl` |
 | `train` | `corpora/pass{N}.txt` (or `cleaned/sentences.txt`) | `models/w2v.mod` |
 | `expand_dictionary` | `models/w2v.mod` | `outputs/expanded_dict.csv` |
-| `score` | `cleaned/sentences.txt`, `parsed/sentence_ids.txt`, `expanded_dict.csv` | `outputs/scores_{METHOD}.csv` |
+| `score` | `corpora/pass{N}.txt` (or `cleaned/sentences.txt` when `use_gensim_phrases=False`), `parsed/sentence_ids.txt`, `expanded_dict.csv` | `outputs/scores_{METHOD}.csv` |
 
 Deleting a file forces that stage and all downstream stages to rerun.
 

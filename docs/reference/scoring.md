@@ -1,7 +1,7 @@
 # Scoring
 
 The scoring kernel turns a doc-level corpus and an expanded
-[dictionary](dictionary.md) into document-level culture scores. Three base
+[dictionary](dictionary.md) into document-level scores. Three base
 methods are supported: `TF` (raw counts), `TFIDF` (`tf * log(N/df)`), and
 `WFIDF` (`(1 + log tf) * log(N/df)`). Each can be combined with the
 `similarity_weights` kernel to produce `TFIDF+SIMWEIGHT` and `WFIDF+SIMWEIGHT`.
@@ -18,7 +18,7 @@ The string literal accepted by `score_document` and `score_documents`. Valid
 values are `"TF"`, `"TFIDF"`, `"WFIDF"`, `"TFIDF+SIMWEIGHT"`, and
 `"WFIDF+SIMWEIGHT"`.
 
-::: lmsy_w2v_rfs.scoring.ScoringMethod
+::: lmsy_w2v_rfs.ScoringMethod
 
 ## iter_doc_level_corpus
 

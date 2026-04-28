@@ -62,7 +62,7 @@ shells.
 ```python
 from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
-seeds = load_example_seeds("culture_2021")
+seeds = load_example_seeds("culture_2021")  # or any dict[str, list[str]]
 p = Pipeline(
     texts=["Innovation and teamwork drive our roadmap at Apple Inc."],
     doc_ids=["doc1"],

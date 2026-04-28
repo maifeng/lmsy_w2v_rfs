@@ -65,15 +65,16 @@ nav:
       - Word2Vec dictionary: concepts/word2vec-dictionary.md
       - Scoring: concepts/scoring.md
   - How-to:
-      - Install CoreNLP: how-to/install-corenlp.md
-      - Run from the command line: how-to/run-from-cli.md
       - Load your documents: how-to/load-documents.md
       - Use your own seeds: how-to/use-your-own-seeds.md
       - Switch preprocessor: how-to/switch-preprocessor.md
+      - Install CoreNLP: how-to/install-corenlp.md
       - Whiten the dimension scores: how-to/whiten-scores.md
       - Resume after a crash: how-to/resume-after-crash.md
-      - Aggregate to firm-year: how-to/aggregate-firm-year.md
+      - Aggregate document scores: how-to/aggregate-firm-year.md
       - Run on HPC: how-to/run-on-hpc.md
+      - Run from the command line: how-to/run-from-cli.md
+      - Troubleshooting: how-to/troubleshooting.md
   - Reference:
       - Pipeline: reference/pipeline.md
       - Config: reference/config.md
@@ -85,5 +86,4 @@ nav:
       - CLI: reference/cli.md
   - Explanation:
       - Design decisions: explanation/design-decisions.md
-      - MWE benchmark comparison: explanation/mwe-comparison.md
-      - Troubleshooting: explanation/troubleshooting.md
+      - Preprocessor comparison: explanation/mwe-comparison.md

@@ -53,20 +53,20 @@ pip install "lmsy_w2v_rfs[spacy]" && python -m spacy download en_core_web_sm
 **Symptoms:**
 
 ```
-stanza.server.client.StartServerError: CoreNLP server failed to start on port 9000
+stanza.server.client.StartServerError: CoreNLP server failed to start on port 9002
 ```
 
-**Cause:** Three common causes, in order of frequency: (1) port 9000 is already in use by another CoreNLP instance or an unrelated process, (2) insufficient JVM heap memory, (3) the CoreNLP archive was never downloaded so the JVM cannot find the model jars.
+**Cause:** Three common causes, in order of frequency: (1) port 9002 is already in use by another CoreNLP instance or an unrelated process, (2) insufficient JVM heap memory, (3) the CoreNLP archive was never downloaded so the JVM cannot find the model jars.
 
 **Fix:**
 
 ```bash
-lsof -i :9000                           # who has the port?
+lsof -i :9002                           # who has the port? (default is 9002; adjust if you set corenlp_port)
 lmsy-w2v-rfs download-corenlp           # (re)download the ~1 GB archive
 ls ~/.cache/lmsy_w2v_rfs/corenlp/       # verify jars are present
 ```
 
-Pass `memory="8G"` to `corenlp_server` if the default 4 GB is too small for long documents.
+Pass `Config(corenlp_memory="8G")` if the default `"6G"` is too small for long documents.
 
 ---
 
@@ -83,8 +83,11 @@ ValueError: preprocessor='static' needs config.mwe_list to be set
 **Fix:** Pass either the packaged `finance` list or a path to your own newline-delimited file:
 
 ```python
-Config(preprocessor="static", mwe_list="finance")            # packaged example
-Config(preprocessor="static", mwe_list="/path/mwes.txt")     # your own list
+from lmsy_w2v_rfs import Config, load_example_seeds
+
+seeds = load_example_seeds("culture_2021")  # or any dict[str, list[str]]
+Config(seeds=seeds, preprocessor="static", mwe_list="finance")            # packaged example
+Config(seeds=seeds, preprocessor="static", mwe_list="/path/mwes.txt")     # your own list
 ```
 
 The packaged `finance` list is hand-curated for earnings-call text; it is not appropriate for other domains. Write your own list or switch to a parser-based backend for domain-agnostic MWE detection.
@@ -104,7 +107,10 @@ KeyError: "word 'shoulder_to_shoulder' not in Word2Vec vocabulary"
 **Fix:** Lower `w2v_min_count` or enlarge the corpus:
 
 ```python
-Config(w2v_min_count=3)           # default is 5; lowering keeps rare words
+from lmsy_w2v_rfs import Config, load_example_seeds
+
+seeds = load_example_seeds("culture_2021")  # or any dict[str, list[str]]
+Config(seeds=seeds, w2v_min_count=3)           # default is 5; lowering keeps rare words
 ```
 
 If the missing token is an MWE, verify that Phase 1 actually joined it. `preprocessor="corenlp"` has the highest MWE recall; switching from `spacy` or `none` often resolves this. You can also add the phrase to a static list and enable the static post-pass with `mwe_list="/path/mwes.txt"`.

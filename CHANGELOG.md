@@ -44,12 +44,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in git. (`75e8990`)
 - `notebooks/data/glassdoor_culture_2000.csv`: 2,000-review workshop corpus
   shipped in the repo for Colab access. (`75e8990`)
-- `Pipeline._invalidate_scores()`: clears both the in-memory `_scores` cache
-  and score CSVs on disk. Called by `edit_dictionary` and
-  `reload_dictionary`. (`a81a0bd`)
-- Tests: `test_edit_dictionary_invalidates_score_csvs`,
-  `test_reload_dictionary_invalidates_score_csvs`. (`a81a0bd`)
-
 ## [0.1.1] - 2026-04-15
 
 ### Fixed
@@ -65,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Non-zero score rate reporting: prints the fraction of documents with a
   non-zero score per dimension, helping users understand sparsity in short
   corpora. (`9790f42`)
+- `Pipeline._invalidate_scores()`: clears both the in-memory `_scores` cache
+  and score CSVs on disk. Called by `edit_dictionary` and
+  `reload_dictionary`. (`a81a0bd`)
+- Tests: `test_edit_dictionary_invalidates_score_csvs`,
+  `test_reload_dictionary_invalidates_score_csvs`. (`a81a0bd`)
 
 ## [0.1.0] - 2026-04-27
 

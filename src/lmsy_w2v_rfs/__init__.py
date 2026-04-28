@@ -17,7 +17,7 @@ Public API:
                                           dict, .json, or .txt
     load_example_seeds                  - opt-in named example seeds
                                           (e.g. "culture_2021")
-    STOPWORDS_SRAF                      - 120-token SRAF stopword list
+    STOPWORDS_SRAF                      - 121-token SRAF stopword list
     load_mwe_list, apply_mwe_list       - optional static-MWE post-pass
     download_corenlp                    - one-call CoreNLP install
                                           (optional ``[corenlp]`` extra)

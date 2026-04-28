@@ -40,6 +40,10 @@ strengths are NER (96% type accuracy) and compound nouns. If your concept
 relies on phrases like `with_respect_to`, `as_well_as`, `in_addition_to`,
 `roll_out`, or `pay_off`, CoreNLP or stanza is the right call.
 
+For the full benchmark (NER quality, throughput, UD background), see [Preprocessor comparison](../explanation/mwe-comparison.md).
+
+When you cannot use CoreNLP, see [Preprocessor comparison](../explanation/mwe-comparison.md) for compensation strategies (`use_gensim_phrases`, `mwe_list`).
+
 ### Config snippets per backend
 
 **CoreNLP (default, paper-faithful):**
