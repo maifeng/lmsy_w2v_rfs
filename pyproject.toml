@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmsy_w2v_rfs"
-version = "0.1.0"
+version = "0.1.1"
 description = "Word-embedding seed expansion and document scoring. Bring your own seeds. Originally Li, Mai, Shen, Yan (2021, RFS)."
 readme = "README.md"
 license = { file = "LICENSE" }
