@@ -150,6 +150,40 @@ def test_reload_dictionary_without_csv_raises(work_dir: Path, culture_seeds) -> 
         pipe.reload_dictionary()
 
 
+def test_edit_dictionary_invalidates_score_csvs(tiny_corpus, work_dir: Path, culture_seeds) -> None:
+    """Curation must drop stale score CSVs; otherwise the next score()
+    call would silently reuse old scores against the new dictionary."""
+    cfg = _base_cfg(culture_seeds)
+    ids = [f"d{i}" for i in range(len(tiny_corpus))]
+    pipe = Pipeline(texts=tiny_corpus, doc_ids=ids, work_dir=work_dir, config=cfg)
+    pipe.run(methods=("TF", "TFIDF", "WFIDF"))
+
+    for method in ("TF", "TFIDF", "WFIDF"):
+        assert pipe.scores_path(method).exists(), f"{method} CSV should exist after run"
+
+    pipe.edit_dictionary(remove={"integrity": list(pipe.expanded_dict["integrity"][:3])})
+
+    for method in ("TF", "TFIDF", "WFIDF"):
+        assert not pipe.scores_path(method).exists(), (
+            f"{method} CSV should be deleted after edit_dictionary"
+        )
+
+    # Recomputing actually recomputes (does not reuse stale data).
+    pipe.score(methods=("TFIDF",))
+    assert pipe.scores_path("TFIDF").exists()
+
+
+def test_reload_dictionary_invalidates_score_csvs(tiny_corpus, work_dir: Path, culture_seeds) -> None:
+    cfg = _base_cfg(culture_seeds)
+    ids = [f"d{i}" for i in range(len(tiny_corpus))]
+    pipe = Pipeline(texts=tiny_corpus, doc_ids=ids, work_dir=work_dir, config=cfg)
+    pipe.run(methods=("TFIDF",))
+    assert pipe.scores_path("TFIDF").exists()
+
+    pipe.reload_dictionary()
+    assert not pipe.scores_path("TFIDF").exists()
+
+
 _HAS_SPACY_SM = False
 if importlib.util.find_spec("spacy") is not None:
     import spacy
