@@ -160,13 +160,6 @@ p.dictionary_preview(top_k=10)
 #
 # Both update the in-memory dictionary and the on-disk CSV in one call.
 # Cached scores are dropped automatically; rerun `p.score()` afterward.
-#
-# **Read the comparison below carefully**: after curation, correlation
-# with the outcome may go DOWN. Generic positives (`excellent`, `overall`,
-# `positive`) often correlate with high culture ratings even though they
-# are not concept-specific. The point of curation is **construct
-# validity** (the dictionary measures only the concept), not maximum
-# correlation.
 
 # %%
 def correlations(scores_df: pd.DataFrame) -> dict[str, float]:
