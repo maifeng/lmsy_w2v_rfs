@@ -119,8 +119,8 @@ Inherited from the parent project `CLAUDE.md`:
 - Files under ~300 lines where possible.
 - Pin deps in `pyproject.toml` with both lower and upper bounds.
 
-## Not-yet-done
+## Current status (as of v0.1.3)
 
-- Colab quickstart `.ipynb` (jupytext source lives in `notebooks/`).
-- MkDocs site (low priority for the RFS 2021 package per `plan/02_packages.md`).
-- PyPI publish (pending Feng's sign-off + GitHub repo creation).
+- Colab notebook: `notebooks/01_quickstart_colab.ipynb` ships in the repo (force-tracked). Jupytext source is `notebooks/01_quickstart.py`.
+- MkDocs site: 23 substantive pages deployed; `mkdocs build --strict` passes.
+- PyPI: published at `lmsy-w2v-rfs` (latest: v0.1.3). Install with `pip install lmsy_w2v_rfs`.
