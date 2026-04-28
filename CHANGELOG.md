@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-04-28
+
+### Added
+
+- Documentation site at https://maifeng.github.io/lmsy_w2v_rfs/ (gh-pages deploy via GitHub Actions).
+- `Documentation` and `Changelog` entries in `[project.urls]` in `pyproject.toml`.
+- `load_seeds` now accepts both flat `{dim: [seeds]}` and wrapped `{"seeds": {dim: [seeds]}}` JSON formats; bundled `seeds_culture.json` is now loadable via `load_seeds` directly.
+- 2 regression tests for `load_seeds` wrapped format (test count: 59 -> 61).
+- `ScoringMethod` re-exported from top-level package (`from lmsy_w2v_rfs import ScoringMethod`).
+- `corenlp_timeout_ms` documented in README "All knobs".
+- Cross-links from `whiten-scores.md` (was orphan: no inbound links).
+
+### Changed
+
+- README title now theory-agnostic: "Word2Vec dictionary expansion and scoring for any seed-based vocabulary."
+- README citation moved from near-top to dedicated bottom section (with one-line "Cite as:" pointer near top).
+- README "Large corpora" recipe replaced with link to HPC how-to (was contradicting it).
+- `mkdocs.yml` `paths`: `[src/lmsy_w2v_rfs]` -> `[src]` (mkdocstrings could not resolve `lmsy_w2v_rfs.*` identifiers in clean CI builds).
+- `mkdocs.yml` `site_description` rewritten as theory-agnostic.
+- `mkdocs.yml` `site_url` set for canonical URL generation.
+- How-to nav reordered: goal-oriented (Load documents, Use seeds, Switch preprocessor) first; install and troubleshooting later.
+- `docs/how-to/aggregate-firm-year.md`: title and nav entry renamed to "Aggregate document scores" (filename kept for back-compat).
+- `docs/how-to/troubleshooting.md`: moved from Explanation to How-to (Diataxis-correct).
+- `docs/explanation/mwe-comparison.md`: nav label renamed to "Preprocessor comparison" (matches page h1).
+- `reference/w2v.md`: expanded from 17-line stub to ~40 lines with descriptions and examples.
+- Install steps de-duplicated 3 places -> 1 canonical (`how-to/install-corenlp.md`).
+- Preprocessor decision tables consolidated; `mwe-comparison.md` is the deep authoritative source.
+- Culture-specific framing replaced with theory-agnostic language across `concepts/scoring.md`, `concepts/word2vec-dictionary.md`, `how-to/aggregate-firm-year.md`, `how-to/load-documents.md`, `reference/pipeline.md`, `reference/scoring.md`.
+- `reference/seeds.md` heading style aligned with other reference pages.
+- `reference/scoring.md`: `ScoringMethod` directive uses canonical top-level path.
+- spaCy no longer called "recommended" in `Config` docstring or `reference/preprocessors.md`; CoreNLP described as the default with neutral language.
+- README `Config(...)` snippets in Step 1b and Step 2 now include `seeds=`.
+- `__all__` in `__init__.py`: `__version__` and `__paper__` removed (still accessible as module attributes).
+
+### Fixed
+
+- 16 `Config(...)` code blocks across 6 how-to pages omitted required `seeds=` (every example raised `ValueError` on copy-paste).
+- `STOPWORDS_SRAF`: type was documented as `frozenset`, actually `set`; count "120" updated to "121" in 6 places.
+- Integrity seed list in `concepts/word2vec-dictionary.md`: was 10 entries with 4 not in JSON; now 14 entries matching `seeds_culture.json`.
+- `docs/how-to/resume-after-crash.md` stage table: `score` reads `corpora/pass{N}.txt` (when `use_gensim_phrases=True`), not `cleaned/sentences.txt`.
+- `docs/how-to/troubleshooting.md`: parameter `memory=` -> `Config(corenlp_memory=)`; default `4 GB` -> `6G`; port `9000` -> `9002`; 3 `Config()` snippets missing `seeds=`.
+- Stale `use_corenlp=False` reference in package CLAUDE.md (replaced by `preprocessor="none"` in v0.1.1).
+- Dead "Limits" cross-reference in `concepts/scoring.md`.
+- CHANGELOG: `a81a0bd` (invalidate stale score CSVs on dictionary curation) moved from `[0.1.2]` to `[0.1.1]` (where it actually shipped).
+- `docs/index.md` footer: 3 missing how-to pages added (`run-from-cli.md`, `whiten-scores.md`, `run-on-hpc.md`).
+
 ## [0.1.3] - 2026-04-28
 
 ### Added
@@ -95,6 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   optional `[corenlp]` extra, 7 test files, MkDocs site scaffold.
   (`1019bfb`)
 
+[0.1.4]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.0...v0.1.1
