@@ -22,7 +22,7 @@ from Li, Mai, Shen, Yan 2021).
 
 ## STOPWORDS_SRAF
 
-A frozenset of 120 generic stopwords drawn from the Loughran-McDonald
+A set of 121 generic stopwords drawn from the Loughran-McDonald
 Software-Readable Accounting Forms (SRAF) list. Passed to `Config` as
 `stopwords=STOPWORDS_SRAF` (the default).
 

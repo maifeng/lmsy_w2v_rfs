@@ -57,10 +57,11 @@ a context manager to guarantee server shutdown. Requires Java 8+ and the
 
 ## SpacyPreprocessor
 
-Recommended default. Parses, lemmatizes, masks entities, and joins
-`fixed` / `flat` / `compound` dependency pairs. On the 150-document bakeoff it
-was 9x faster than stanza and 2x faster than CoreNLP, with the cleanest NER
-output and the smallest Word2Vec-ready vocabulary.
+Parses, lemmatizes, masks entities, and joins `fixed` / `flat` / `compound`
+dependency pairs. On the 150-document bakeoff it was 9x faster than stanza and
+2x faster than CoreNLP, with the cleanest NER output and the smallest
+Word2Vec-ready vocabulary. Use when Java is not available and parse speed
+matters; `"corenlp"` is the package default for paper-faithful results.
 
 ::: lmsy_w2v_rfs.preprocessors.spacy_pp.SpacyPreprocessor
 

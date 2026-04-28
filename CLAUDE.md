@@ -83,7 +83,7 @@ test suite proves this.
   `corpus_doc_level.pickle`; we never materialize that.
 - **gensim 4 throughout.** `vector_size=` / `epochs=` on Word2Vec,
   `connector_words=` on Phrases, `model.wv.key_to_index` for vocab membership.
-- **The plain-parse path.** With `use_corenlp=False`, `_parse_plain` just writes
+- **The plain-parse path.** With `preprocessor="none"`, `_parse_plain` just writes
   each input line as a sentence with a `doc_id_0` ID. The clean stage then
   uses `clean_plain_line` (lowercase, strip punctuation, drop stopwords). This
   is the Java-free happy path.
@@ -93,7 +93,7 @@ test suite proves this.
 ```
 src/lmsy_w2v_rfs/data/
 ├── seeds_culture.json       # 5 dims, 47 seeds, loaded at import
-└── stopwords_sraf.txt       # 120-token SRAF list
+└── stopwords_sraf.txt       # 121-token SRAF list
 ```
 
 Both are shipped via `[tool.setuptools.package-data]` in `pyproject.toml`.

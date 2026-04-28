@@ -21,14 +21,16 @@ groups, and returns a sorted panel.
 
 ```python
 import pandas as pd
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
+
+seeds = load_example_seeds("culture_2021")
 
 # 1. Run the pipeline as usual.
 p = Pipeline(
     texts=transcripts,
     doc_ids=transcript_ids,          # e.g., ["AAPL_2021Q1", "AAPL_2021Q2", ...]
     work_dir="runs/firm_panel",
-    config=Config(preprocessor="corenlp", n_cores=8),
+    config=Config(seeds=seeds, preprocessor="corenlp", n_cores=8),
 )
 p.run(methods=("TFIDF",))
 

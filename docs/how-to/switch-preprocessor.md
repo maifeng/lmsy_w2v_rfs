@@ -45,9 +45,11 @@ relies on phrases like `with_respect_to`, `as_well_as`, `in_addition_to`,
 **CoreNLP (default, paper-faithful):**
 
 ```python
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
+seeds = load_example_seeds("culture_2021")
 cfg = Config(
+    seeds=seeds,
     preprocessor="corenlp",
     n_cores=8,                   # JVM thread pool size
     corenlp_memory="6G",
@@ -62,6 +64,7 @@ Needs `pip install "lmsy_w2v_rfs[corenlp]"` and
 
 ```python
 cfg = Config(
+    seeds=seeds,
     preprocessor="spacy",
     spacy_model="en_core_web_sm",   # or "_md" / "_trf"
     n_cores=8,                       # Python process count
@@ -76,6 +79,7 @@ transcripts at `n_cores=8`.
 
 ```python
 cfg = Config(
+    seeds=seeds,
     preprocessor="stanza",
     n_cores=4,
 )
@@ -89,6 +93,7 @@ supported on Apple Silicon and is optional on CUDA.
 
 ```python
 cfg = Config(
+    seeds={"integrity": ["integrity", "ethic"]},
     preprocessor="static",
     mwe_list="finance",              # packaged earnings-call list
 )
@@ -97,6 +102,7 @@ cfg = Config(
 ```python
 # or with your own list
 cfg = Config(
+    seeds={"integrity": ["integrity", "ethic"]},
     preprocessor="static",
     mwe_list="path/to/my_mwes.txt",   # one MWE per line, space-separated tokens
 )
@@ -108,7 +114,7 @@ No lemmatization, no NER masking.
 **None (pure whitespace split):**
 
 ```python
-cfg = Config(preprocessor="none")
+cfg = Config(seeds={"integrity": ["integrity", "ethic"]}, preprocessor="none")
 ```
 
 For pre-lemmatized corpora or when you want gensim `Phrases` (Phase 2) to do
@@ -122,6 +128,7 @@ IS the preprocessor).
 
 ```python
 cfg = Config(
+    seeds=seeds,
     preprocessor="spacy",
     mwe_list="finance",              # rescue MWEs spaCy's UD converter drops
 )

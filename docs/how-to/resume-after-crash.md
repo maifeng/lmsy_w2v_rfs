@@ -16,13 +16,14 @@ Rerun the same command. To force re-execution of a specific stage, delete its
 output file (or pass `force=True` for the whole pipeline).
 
 ```python
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
+seeds = load_example_seeds("culture_2021")
 p = Pipeline(
     texts=my_texts,
     doc_ids=my_ids,
     work_dir="runs/my_experiment",
-    config=Config(preprocessor="corenlp", n_cores=8),
+    config=Config(seeds=seeds, preprocessor="corenlp", n_cores=8),
 )
 p.run()            # first time: runs every stage
 p.run()            # after a crash: skips stages whose outputs exist
@@ -41,9 +42,10 @@ rerun only that stage plus everything downstream.
 rm runs/my_experiment/models/w2v.mod
 
 python -c "
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
+seeds = load_example_seeds('culture_2021')
 p = Pipeline(texts=..., doc_ids=..., work_dir='runs/my_experiment',
-             config=Config(preprocessor='corenlp'))
+             config=Config(seeds=seeds, preprocessor='corenlp'))
 p.run()
 "
 ```

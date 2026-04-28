@@ -19,13 +19,15 @@ templates tie it all together.
 
 ```python
 import os
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
+seeds = load_example_seeds("culture_2021")
 N = int(os.environ.get("SLURM_CPUS_PER_TASK",
          os.environ.get("NSLOTS",                 # SGE
          os.cpu_count())))
 
 cfg = Config(
+    seeds=seeds,
     preprocessor="corenlp",
     n_cores=N,           # JVM threads for CoreNLP; process count for spaCy / stanza
     corenlp_memory="12G" if N >= 16 else "6G",
@@ -117,9 +119,10 @@ source .venv/bin/activate
 
 python -c "
 import os
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
+seeds = load_example_seeds('culture_2021')
 i = int(os.environ['SLURM_ARRAY_TASK_ID'])
-cfg = Config(preprocessor='corenlp', n_cores=8, corenlp_memory='12G',
+cfg = Config(seeds=seeds, preprocessor='corenlp', n_cores=8, corenlp_memory='12G',
              corenlp_port=9002 + i)
 p = Pipeline.from_text_file(f'shards/shard_{i:03d}.txt',
                             work_dir=f'runs/shard_{i:03d}', config=cfg)
@@ -171,10 +174,11 @@ port=$((9002 + i))
 
 python -c "
 import os
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
+seeds = load_example_seeds('culture_2021')
 i = int(os.environ['SGE_TASK_ID']) - 1
 N = int(os.environ.get('NSLOTS', 8))
-cfg = Config(preprocessor='corenlp', n_cores=N, corenlp_memory='12G',
+cfg = Config(seeds=seeds, preprocessor='corenlp', n_cores=N, corenlp_memory='12G',
              corenlp_port=9002 + i)
 p = Pipeline.from_text_file(f'shards/shard_{i:03d}.txt',
                             work_dir=f'runs/shard_{i:03d}', config=cfg)
