@@ -216,17 +216,18 @@ CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv 
 
 ## Large corpora
 
-Most stages stream through disk rather than holding the corpus in memory. `parse` writes one parsed sentence per line to `work_dir/parsed/sentences.txt`; `clean` reads and writes line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The 2021 paper trained on roughly 270,000 earnings-call transcripts on a single workstation.
+Once parsing finishes, downstream stages stream through disk: `clean` reads parsed sentences line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The bottleneck is the **input stage**: the document loader holds the corpus in a Python list before parsing begins.
 
-For a directory tree of plain-text files (one document per file, common for SEC filings, conference calls, court opinions, etc.):
+The scaling-friendly input format is **one document per line in a single file**, with an optional parallel IDs file. This is what the 2021 paper used for ~270,000 earnings-call transcripts on a single workstation. A directory of millions of small files is the wrong shape: filesystems run out of inodes long before they run out of bytes, and small-file I/O is much slower than streaming a single large file.
 
 ```python
 from lmsy_w2v_rfs import Pipeline, Config, load_seeds
 
-p = Pipeline.from_directory(
-    "/data/sec_filings/",
-    pattern="**/*.txt",                         # recursive glob
-    work_dir="runs/sec",
+# transcripts.txt: one document per line. transcript_ids.txt: matching IDs.
+p = Pipeline.from_text_file(
+    "/data/transcripts.txt",
+    id_path="/data/transcript_ids.txt",
+    work_dir="runs/big",
     config=Config(
         seeds=load_seeds("my_seeds.txt"),
         preprocessor="spacy",                   # or "corenlp" for paper-faithful
@@ -236,9 +237,11 @@ p = Pipeline.from_directory(
 p.run()
 ```
 
-Each file becomes one document; the file's stem (`AAPL_2024.txt` → `"AAPL_2024"`) is the document ID. The factory still loads file contents into a Python list at construction, so peak memory scales with total corpus size at that moment.
+If `id_path` is omitted, IDs are generated as line numbers (`"0"`, `"1"`, ...).
 
-For corpora that exceed RAM (millions of long documents), split the directory into shards of ~100k files, run `parse` separately per shard, concatenate each shard's `parsed/sentences.txt` and `parsed/sentence_ids.txt` into a merged `work_dir`, then run `clean`, `phrase`, `train`, `expand_dictionary`, and `score` once on the merged corpus. The stage methods read from disk and are idempotent, so this kind of manual orchestration works without subclassing.
+**For corpora that exceed RAM** (tens of millions of long documents), pre-split `transcripts.txt` into shards (`split -l 100000 transcripts.txt shard_`), run `parse` separately per shard, concatenate each shard's `parsed/sentences.txt` and `parsed/sentence_ids.txt` into a merged `work_dir`, then run `clean`, `phrase`, `train`, `expand_dictionary`, and `score` once on the merged corpus. The stage methods read from disk and are idempotent, so this kind of manual orchestration works without subclassing.
+
+For smaller corpora (a few thousand to a hundred thousand documents), `Pipeline.from_directory(...)`, `Pipeline.from_csv(...)`, and `Pipeline.from_dataframe(...)` are convenient. They all materialize the corpus in memory at construction.
 
 ---
 
