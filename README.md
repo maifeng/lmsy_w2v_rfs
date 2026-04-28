@@ -1,359 +1,177 @@
 # lmsy_w2v_rfs
 
-**Word2Vec-based corporate-culture measurement, ported from Li, Mai, Shen, Yan (2021).**
+**Word-embedding seed expansion and document scoring for text analysis.**
 
-Code derived from Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), "Measuring Corporate Culture Using Machine Learning," *Review of Financial Studies* 34(7):3265-3315, [doi.org/10.1093/rfs/hhaa079](https://doi.org/10.1093/rfs/hhaa079).
+You bring a corpus and a seed-word dictionary, one short list per concept you want to measure. The package trains Word2Vec on your corpus, expands each seed list via nearest-neighbor search in the embedding space, and scores every document with TF / TF-IDF / WFIDF variants.
 
-The framework itself is domain-agnostic. You supply a corpus and a per-concept seed-word dictionary; it trains Word2Vec, expands each seed set by nearest-neighbor search, and scores every document on each concept.
+Originally a port of Li, Mai, Shen, Yan (2021), *RFS* corporate-culture method. The package itself is theory-agnostic: any concept that fits "a list of words" works.
 
 ---
 
-## The idea in one example
+## The key pipeline
 
-The pipeline's job is to take a **small seed word list per concept** and a **corpus of documents**, then train Word2Vec on the corpus, use nearest-neighbor search in the embedding space to **expand** each seed list into a full vocabulary, and score every document by counting weighted hits from the expanded vocabulary.
+Five stages; you run them with one call, then optionally inspect and curate the expanded dictionary before scoring.
 
-**Step 1. You provide a seed dictionary.** 47 words across five dimensions, from the 2021 paper:
+### 1. Define your seeds
+
+The only place you tell the package what to measure. Any mapping of dimension name to a list of seed words works. Three equivalent ways:
 
 ```python
+# (a) Python dict
 seeds = {
-    "integrity":  ["integrity", "ethic", "ethical", "accountable", "trust",
-                   "honesty", "honest", "transparency", "transparent"],
-    "teamwork":   ["teamwork", "collaboration", "collaborate", "cooperation"],
-    "innovation": ["innovation", "innovate", "innovative", "creativity",
-                   "creative", "passion", "excellence", "pride"],
-    "respect":    ["respectful", "talent", "talented", "employee", "dignity",
-                   "empowerment", "empower"],
-    "quality":    ["quality", "customer", "dedicated", "dedication"],
+    "risk":   ["risk", "uncertainty", "volatility", "downside"],
+    "growth": ["growth", "expansion", "scale", "opportunity"],
 }
+
+# (b) JSON file
+from lmsy_w2v_rfs import load_seeds
+seeds = load_seeds("my_seeds.json")
+
+# (c) Plain text file: one dim per line, "name: word1 word2 ..."
+seeds = load_seeds("my_seeds.txt")
 ```
 
-**Step 2. You provide a corpus.** Here a small one; in practice, tens of thousands of earnings-call transcripts. See [how to load your documents](#how-do-i-load-my-documents) below for the many common formats.
+To reproduce the 2021 paper's 5-dim culture dictionary:
+
+```python
+from lmsy_w2v_rfs import load_example_seeds
+seeds = load_example_seeds("culture_2021")
+```
+
+### 2. Run the pipeline
 
 ```python
 from lmsy_w2v_rfs import Pipeline, Config
 
-p = Pipeline(
-    texts=earnings_call_texts,   # list of strings (other loaders: CSV, JSONL, directory, DataFrame)
-    doc_ids=firm_quarter_ids,
+p = Pipeline.from_csv(
+    "transcripts.csv",
+    text_col="text", id_col="call_id",
     work_dir="runs/my_experiment",
-    config=Config(seeds=seeds),
+    config=Config(seeds=seeds, preprocessor="none"),  # "none" = no Java required
 )
 p.run()
 ```
 
-**Step 3. The pipeline expands the 47 seeds into a few thousand words.** These are the words whose Word2Vec vectors are closest to the mean of each dimension's seed vectors:
+`run()` parses, cleans, learns phrases, trains Word2Vec, expands the seed dictionary, and scores every document. Other input formats (DataFrame, directory of files, JSONL, in-memory list) are listed [below](#how-do-i-load-my-documents).
+
+### 3. Inspect the expanded dictionary
+
+`show_dictionary` prints seeds and the top-K expanded words per dimension. `dictionary_preview` returns the same content as a DataFrame for notebook display.
 
 ```python
-print(p.culture_dict["integrity"][:15])
-# ['integrity', 'ethic', 'ethical', 'accountable', 'honest', 'honesty',
-#  'trust', 'transparency', 'accountability', 'fairness', 'responsibility',
-#  'win_win', 'pay_close_attention', 'stay_close_to', 'balancing_act']
-
-print(p.culture_dict["quality"][:15])
-# ['customer', 'quality', 'customer_experience', 'customer_service',
-#  'high_quality', 'cost_effective', 'satisfy_need', 'dedicated',
-#  'superior_value', 'customer_focused', 'knowledge', 'functionality', ...]
+p.show_dictionary(top_k=10)
+p.dictionary_preview(top_k=10)   # DataFrame
 ```
 
-The expanded dictionary is what you trust the pipeline for. Seeds are the hand-curated input; the expansion is the data-driven output. Without the expansion step, this is just a keyword counter.
+The expansion is what you trust the pipeline for. Without it, this is just a keyword counter.
 
-**Step 4. Documents get scored.** Per document, per dimension, tf-idf weighted count of hits from the expanded dictionary, divided by document length.
+### 4. Curate (optional, recommended)
+
+Word2Vec expansion picks up corpus-specific terms but also surfaces noise. The 2021 paper's authors manually inspected and edited the dictionary before scoring. Two paths:
+
+**Programmatic** (replicable, in notebook):
 
 ```python
-print(p.score_df("TFIDF"))
+p.edit_dictionary(
+    remove={"risk": ["fantastic", "build"]},
+    add={"risk": ["liability"]},
+)
 ```
 
-| Doc_ID | innovation | integrity | quality | respect | teamwork | document_length |
-|---|---|---|---|---|---|---|
-| AAPL_2024Q1 | 0.82 | 0.05 | 0.11 | 0.03 | 0.02 | 15,240 |
-| WFC_2024Q1  | 0.04 | 0.73 | 0.12 | 0.08 | 0.03 | 12,105 |
-| TSLA_2024Q1 | 0.91 | 0.04 | 0.22 | 0.03 | 0.05 | 19,850 |
+**Spreadsheet** (faster for big dicts): open `p.dict_path` (a CSV) in Excel, edit, save, then call `p.reload_dictionary()`.
 
-**Optional Step 5.** Aggregate to firm-year with `p.firm_year(id_to_firm)`.
+Both paths update both the in-memory dict and the on-disk CSV. Cached scores are dropped automatically; rerun `p.score()` to rescore against the curated dictionary.
 
-The 47 input seeds grew into thousands of culture-related words because Word2Vec learned that `customer_experience` sits near `customer` in vector space, `win_win` sits near `integrity`, `cost_effective` sits near `quality`. That is the whole point.
+### 5. Read the scores
 
-The pipeline has two construction phases, both on by default:
+```python
+p.score_df("TFIDF")                  # one row per document
+p.firm_year(id_to_firm, "TFIDF")     # aggregated to (firm, year)
+```
 
-1. **Phase 1a: parser-based syntactic MWE joining + NER masking.** Default `preprocessor="corenlp"`, matching the 2021 paper. Stanford CoreNLP via `stanza.server.CoreNLPClient` gives the best syntactic MWE coverage (76% of our benchmark) and scales near-linearly with JVM threads (5.7x speedup at 8 threads on the measured run).
-2. **Phase 2: gensim `Phrases` statistical MWE learning.** Learns high-frequency bigrams and trigrams from your corpus.
-
-Set `preprocessor="spacy"` for the fastest Java-free path (spaCy sm with `n_process=8` finishes the 1,393-doc sample in ~4 min vs CoreNLP's ~12 min, at the cost of 0% syntactic MWE recall). `preprocessor="stanza"` is the Python-native middle ground. `preprocessor="static"` runs a curated list only. `preprocessor="none"` skips Phase 1a entirely.
+| Doc_ID | risk | growth | document_length |
+|---|---|---|---|
+| AAPL_2024Q1 | 0.05 | 0.82 | 15,240 |
+| WFC_2024Q1  | 0.73 | 0.04 | 12,105 |
 
 ---
 
 ## How do I load my documents?
 
-Whatever your raw data format, there is a one-line way in. Pick whichever matches what you have on disk:
-
-**(a) You already have a list of strings in memory.**
+Pick whichever matches what you have on disk:
 
 ```python
-p = Pipeline(
-    texts=["text of doc 1", "text of doc 2", ...],
-    doc_ids=["id1", "id2", ...],
-    work_dir="runs/x",
-)
+Pipeline(texts=[...], doc_ids=[...], work_dir=..., config=cfg)        # in-memory list
+Pipeline.from_csv("transcripts.csv", text_col="text", id_col="id", ...) # CSV
+Pipeline.from_dataframe(df, text_col="text", id_col="id", ...)          # DataFrame
+Pipeline.from_directory("./10k_filings/", pattern="*.txt", ...)         # one file per doc
+Pipeline.from_text_file("docs.txt", id_path="ids.txt", ...)             # one doc per line
+Pipeline.from_jsonl("transcripts.jsonl", text_key="t", id_key="i", ...) # JSONL
 ```
 
-**(b) A CSV file with `id` and `text` columns** (Compustat, WRDS, your own pull):
-
-```python
-p = Pipeline.from_csv("transcripts.csv", text_col="text", id_col="id", work_dir="runs/x")
-```
-
-**(c) A pandas DataFrame you already built:**
-
-```python
-import pandas as pd
-df = pd.read_parquet("transcripts.parquet")
-p = Pipeline.from_dataframe(df, text_col="transcript", id_col="call_id", work_dir="runs/x")
-```
-
-**(d) A directory of one-file-per-document `.txt` files** (SEC filings, earnings calls you downloaded one at a time):
-
-```python
-p = Pipeline.from_directory("./10k_filings/", pattern="*.txt", work_dir="runs/x")
-# Document IDs become the file stems: 10k_AAPL_2024.txt -> "10k_AAPL_2024"
-```
-
-**(e) A single large text file, one document per line** (what the 2021 paper shipped):
-
-```python
-p = Pipeline.from_text_file(
-    "data/input/documents.txt",
-    id_path="data/input/document_ids.txt",
-    work_dir="runs/x",
-)
-```
-
-**(f) A JSON Lines file, one JSON record per line:**
-
-```python
-p = Pipeline.from_jsonl("transcripts.jsonl", text_key="transcript", id_key="call_id",
-                        work_dir="runs/x")
-```
-
-Each factory materializes the documents into a Python list in memory (fine for hundreds of thousands of earnings calls on a laptop; not fine for hundreds of millions of documents). For truly streaming ingestion over corpora larger than RAM, shard your input into 10k-document files and run the pipeline once per shard. See [how-to/load-documents.md](docs/how-to/load-documents.md) for worked examples of every format.
-
-## How do I change the seed dictionary?
-
-Three ways, pick whichever is most convenient for you:
-
-**(a) Pass a Python dict** (what the example above shows):
-
-```python
-Config(seeds={"risk": ["risk", "uncertainty", "volatility"], ...})
-```
-
-**(b) Load a JSON file:**
-
-```python
-# my_seeds.json
-# {
-#   "risk":   ["risk", "uncertainty", "volatility"],
-#   "growth": ["growth", "expand", "expansion"]
-# }
-from lmsy_w2v_rfs import load_seeds
-Config(seeds=load_seeds("my_seeds.json"))
-```
-
-**(c) Load a plain text file** (one dimension per line, easiest to edit in Excel or a text editor):
-
-```text
-# my_seeds.txt
-risk:   risk uncertainty volatility hedge downside
-growth: growth expand expansion scale upside
-people: employee workforce talent hire retain
-```
-
-```python
-Config(seeds=load_seeds("my_seeds.txt"))
-```
-
-Or from the CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt ...`.
+CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv ...`
 
 ---
 
 ## Install
 
-The default preprocessor is `corenlp`. You need the `[corenlp]` extra AND a Java 8+ runtime (`brew install openjdk@21` / `apt install default-jre`):
+The default preprocessor is `corenlp` (paper-faithful, needs Java):
 
 ```bash
-pip install "lmsy_w2v_rfs[corenlp]"     # recommended default (paper-faithful)
-lmsy-w2v-rfs download-corenlp           # one-time ~1 GB CoreNLP archive download
+pip install "lmsy_w2v_rfs[corenlp]"
+lmsy-w2v-rfs download-corenlp           # one-time ~1 GB CoreNLP archive
 ```
 
-If Java is unavailable, the Python-only alternatives are:
+Java-free alternatives:
 
 ```bash
-pip install "lmsy_w2v_rfs[spacy]"       # spaCy: fastest, lowest friction (no Java)
-python -m spacy download en_core_web_sm # small model; trf/md are also options
-
-pip install "lmsy_w2v_rfs[stanza]"      # stanza: Python-native parser, modern UD
-
-pip install "lmsy_w2v_rfs[all]"         # all three backends at once
+pip install "lmsy_w2v_rfs[spacy]"       # spaCy: fastest, no Java
+python -m spacy download en_core_web_sm
+pip install "lmsy_w2v_rfs[stanza]"      # Python-native parser
+pip install lmsy_w2v_rfs                # bare install: use preprocessor="static" or "none"
 ```
 
-Then set `Config(preprocessor="spacy")` or the CLI flag `--preprocessor spacy`.
-
-Bare `pip install lmsy_w2v_rfs` is fine if you plan to use `preprocessor="static"` or `preprocessor="none"` (no parser needed).
-
-For spaCy:
-
-```bash
-python -m spacy download en_core_web_trf    # best NER, slower
-python -m spacy download en_core_web_sm     # smaller and faster
-```
-
-For CoreNLP (one-time archive download, ~1 GB):
-
-```bash
-lmsy-w2v-rfs download-corenlp
-```
+Then `Config(seeds=..., preprocessor="spacy")` (or `"stanza"` / `"static"` / `"none"`).
 
 ---
 
-## Two-phase construction, both configurable
+## Two construction phases
 
-| Phase | What it does | Knob | Default |
-|---|---|---|---|
-| 1a | Parser-based lemmatization, NER masking, MWE joining | `preprocessor` | `"corenlp"` |
-| 1b | Optional static MWE list as a post-pass | `mwe_list` | `None` |
-| 2 | gensim `Phrases` learns corpus-specific bigrams and trigrams | `use_gensim_phrases`, `phrase_passes` | `True`, `2` |
+Both on by default; both configurable.
 
-### Preprocessor options (Phase 1a)
+| Phase | What it does | Default |
+|---|---|---|
+| 1 | Parser-based lemmatization, NER masking, multi-word-expression (MWE) joining (e.g., `interest_rate`) (`preprocessor=`) | `"corenlp"` |
+| 2 | gensim `Phrases` learns corpus-specific bigrams and trigrams | `True`, 2 passes |
 
-| value | What it does | Needs | Strength |
-|---|---|---|---|
-| `"corenlp"` (default) | parse, NER mask, UD v2 MWE join | `[corenlp]` extra + Java | paper-exact reproduction, best syntactic MWE |
-| `"spacy"` | parse, NER mask, UD compound join | `[spacy]` extra + model | fastest parser, best NER, no Java |
-| `"stanza"` | parse, NER mask, UD v2 MWE join | `[stanza]` extra | Python-native, no Java |
-| `"static"` | NLTK `MWETokenizer` on your list | just `nltk` | deterministic, no parser |
-| `"none"` | whitespace tokenize, lowercase | nothing | fastest path, no lemmas or NER |
+Preprocessor options: `"corenlp"` (paper-exact, Java), `"spacy"` (fastest, no Java), `"stanza"` (Python-native), `"static"` (curated list only), `"none"` (whitespace tokenize only).
 
-See [MWE benchmark comparison](docs/explanation/mwe-comparison.md) for the benchmark that motivated this shape.
-
-### Static MWE list (Phase 1b)
-
-Completely optional. Applied AFTER the main preprocessor as a post-pass, so MWEs the parser missed can still be joined. Three ways to supply one:
-
-```python
-Config(mwe_list=None)             # default, skip this pass
-Config(mwe_list="finance")        # packaged earnings-call example list
-Config(mwe_list="my_mwes.txt")    # your own newline-delimited file
-```
-
-**About the packaged `"finance"` list**: it is a hand-curated example file the author assembled from (i) UD v2 `fixed` prepositional phrases, (ii) earnings-call jargon listed from general knowledge, (iii) business-culture MWEs from the RFS 2021 paper's dictionary appendix. **It is not a default.** It is not derived from any corpus-driven process. If you are not working with earnings-call text, ignore it or pass your own list. The file lives at `src/lmsy_w2v_rfs/data/mwes_finance.txt` and is readable.
-
-### Full `Config` reference
-
-Every knob, with defaults. The three sections above cover `preprocessor` and `mwe_list`; everything else here is standard Word2Vec and scoring machinery.
-
-```python
-Config(
-    # Phase 1 preprocessing
-    preprocessor="corenlp",            # "corenlp" | "spacy" | "stanza" | "static" | "none"
-    mwe_list=None,                     # None | "finance" | path to a txt file
-    spacy_model="en_core_web_sm",      # used when preprocessor == "spacy"
-    n_cores=4,                         # JVM threads / spaCy n_process / stanza workers
-    corenlp_memory="6G",
-    corenlp_port=9002,
-
-    # Phase 2: gensim Phrases
-    use_gensim_phrases=True,
-    phrase_passes=2,                   # 1 = bigram, 2 = bigram + trigram
-    phrase_threshold=10.0,
-    phrase_min_count=10,
-
-    # Word2Vec
-    w2v_dim=300,
-    w2v_window=5,
-    w2v_min_count=5,
-    w2v_epochs=20,
-
-    # Dictionary expansion
-    n_words_dim=500,                   # top-k expanded words per dimension
-    min_similarity=0.0,
-    dict_restrict_vocab=None,          # fraction in (0,1] to restrict expansion to top-freq vocab
-
-    # Scoring
-    tfidf_normalize=False,             # L2-normalize tf-idf vectors per document
-    zca_whiten=False,                  # decorrelate dimension columns post-scoring
-    zca_epsilon=1e-6,
-
-    random_state=42,
-)
-```
+Full `Config` knob list and benchmark notes: see [docs/](docs/).
 
 ---
 
 ## Scoring methods
 
-| Method | Weight on one dictionary hit |
+| Method | Weight per dictionary hit |
 |---|---|
 | `TF` | `tf` |
-| `TFIDF` | `tf * log(N / df)` |
-| `WFIDF` | `(1 + log(tf)) * log(N / df)` |
-| `TFIDF+SIMWEIGHT` | `tf * log(N / df) * 1 / ln(2 + rank)` |
-| `WFIDF+SIMWEIGHT` | `(1 + log(tf)) * log(N / df) * 1 / ln(2 + rank)` |
-
-Similarity weights come from the expansion rank (seed at rank 0 gets weight 1.44, rank 100 gets 0.21). Matches the 2021 paper's Appendix.
-
----
-
-## Firm-year aggregation
-
-```python
-firm_year = p.firm_year(id_to_firm_df, method="TFIDF")
-```
-
-Scores are divided by document length, scaled to per-100-tokens, and averaged within `(firm_id, time)` groups.
-
----
-
-## CLI
-
-A full walkthrough for command-line users lives at
-[docs/how-to/run-from-cli.md](docs/how-to/run-from-cli.md). Quick examples:
-
-```bash
-# CSV in, scores out, default CoreNLP preprocessor, 8 threads
-lmsy-w2v-rfs run --input transcripts.csv --input-format csv \
-  --text-col transcript --id-col call_id \
-  --seeds my_seeds.txt \
-  --out runs/my_experiment --n-cores 8
-
-# Directory of .txt files, fast spaCy path (no Java needed)
-lmsy-w2v-rfs run --input ./10k_filings/ --input-format directory \
-  --preprocessor spacy --spacy-model en_core_web_sm \
-  --out runs/10k
-
-# One document per line (the 2021 paper's sample format)
-lmsy-w2v-rfs run --input documents.txt --ids document_ids.txt \
-  --out runs/rfs2021
-
-# First-time CoreNLP setup
-lmsy-w2v-rfs download-corenlp
-```
-
-Every flag is documented in [docs/reference/cli.md](docs/reference/cli.md).
-Supported input formats: plain text (one doc per line), CSV, JSONL, directory
-of files. Seed dictionaries: Python dict, JSON, or plain text.
+| `TFIDF` | `tf · log(N/df)` |
+| `WFIDF` | `(1 + log tf) · log(N/df)` |
+| `TFIDF+SIMWEIGHT`, `WFIDF+SIMWEIGHT` | × `1/ln(2 + rank)` |
 
 ---
 
 ## Limits
 
-The scorer is a bag-of-words counter over a learned vocabulary. It cannot read context within a sentence, cannot handle negation, and cannot judge whether a passage describes practice or aspiration. A transcript that says "we do not tolerate a lack of integrity" scores identically to a genuine integrity claim.
+The scorer is a bag-of-words counter over a learned vocabulary. It cannot read sentence context, cannot handle negation, cannot tell practice from aspiration. "We do not tolerate a lack of integrity" scores like a genuine integrity claim.
 
-The dictionary is frozen at training time. Adding "AI" or "freelancer" as culture terms means retraining.
+The dictionary is frozen at training time. New domain words mean retraining.
 
-For context-aware scoring, see the companion package [`lmsyz_genai_ie_rfs`](https://github.com/feng-mai/lmsyz_genai_ie_rfs), which replaces the weighted count with an LLM prompt.
+For context-aware scoring, see the companion package `lmsyz_genai_ie_rfs`, which replaces the weighted count with an LLM prompt.
 
 ---
 
-## Paper
+## Citation
 
 > Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021).
 > "Measuring Corporate Culture Using Machine Learning."
@@ -365,10 +183,7 @@ For context-aware scoring, see the companion package [`lmsyz_genai_ie_rfs`](http
   title={Measuring Corporate Culture Using Machine Learning},
   author={Li, Kai and Mai, Feng and Shen, Rui and Yan, Xinyan},
   journal={The Review of Financial Studies},
-  volume={34},
-  number={7},
-  pages={3265--3315},
-  year={2021},
+  volume={34}, number={7}, pages={3265--3315}, year={2021},
   doi={10.1093/rfs/hhaa079}
 }
 ```

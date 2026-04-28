@@ -1,9 +1,8 @@
-"""Config dataclass, seed dictionary, and stopword list.
+"""Config dataclass, seed loading, and stopword list.
 
-Everything hyperparameter-shaped lives here. Values match the 2021
-replication repo's ``global_options.py`` where applicable.
-
-Phase 1 preprocessing is pluggable. See ``Config.preprocessor`` below.
+The package is theory-agnostic: every run requires a user-supplied seed
+dictionary. The 2021 paper's 5-dimension culture seeds are shipped only as
+a named example via :func:`load_example_seeds`, never as a default.
 """
 
 from __future__ import annotations
@@ -20,14 +19,15 @@ PreprocessorName = Literal["none", "static", "stanza", "corenlp", "spacy"]
 """Valid values for ``Config.preprocessor``."""
 
 
-def _load_seed_json() -> dict[str, Any]:
-    """Load the packaged culture seed dictionary.
+_EXAMPLE_SEEDS: dict[str, str] = {
+    "culture_2021": "seeds_culture.json",
+}
+"""Named example seed dictionaries shipped as package data.
 
-    Returns:
-        The parsed ``data/seeds_culture.json`` contents.
-    """
-    with resources.files("lmsy_w2v_rfs.data").joinpath("seeds_culture.json").open("r") as f:
-        return json.load(f)
+Each entry maps a short example name to a JSON file under
+``lmsy_w2v_rfs/data/``. Add new entries here to expose more reproducible
+example dictionaries.
+"""
 
 
 def _load_stopwords() -> set[str]:
@@ -40,23 +40,51 @@ def _load_stopwords() -> set[str]:
     return {w.strip().lower() for w in text.split() if w.strip()}
 
 
-_SEED_JSON: dict[str, Any] = _load_seed_json()
-
-CULTURE_DIMS: list[str] = list(_SEED_JSON["dims"])
-"""Five culture dimensions from Li et al. (2021, RFS)."""
-
-CULTURE_SEEDS: dict[str, list[str]] = {k: list(v) for k, v in _SEED_JSON["seeds"].items()}
-"""Five-dimension seed dictionary. 47 seed words total."""
-
 STOPWORDS_SRAF: set[str] = _load_stopwords()
 """120-token generic stopword list from Notre Dame SRAF."""
 
 
+def load_example_seeds(name: str) -> dict[str, list[str]]:
+    """Load a named example seed dictionary shipped with the package.
+
+    The package itself is seed-agnostic. This helper is provided so users
+    who want to reproduce a specific paper can opt in by name. The 2021
+    RFS paper's five-dimension culture dictionary is currently the only
+    example.
+
+    Args:
+        name: Short identifier of the example. Currently:
+            ``"culture_2021"`` (Li, Mai, Shen, Yan 2021, RFS).
+
+    Returns:
+        A fresh ``dict[str, list[str]]`` copy of the example seeds.
+
+    Raises:
+        KeyError: If ``name`` is not a known example.
+
+    Example::
+
+        from lmsy_w2v_rfs import Config, load_example_seeds
+
+        seeds = load_example_seeds("culture_2021")
+        cfg = Config(seeds=seeds, preprocessor="none")
+    """
+    if name not in _EXAMPLE_SEEDS:
+        known = ", ".join(sorted(_EXAMPLE_SEEDS)) or "(none)"
+        raise KeyError(
+            f"Unknown example seed dictionary {name!r}. Known: {known}."
+        )
+    filename = _EXAMPLE_SEEDS[name]
+    with resources.files("lmsy_w2v_rfs.data").joinpath(filename).open("r") as f:
+        data = json.load(f)
+    return {k: list(v) for k, v in data["seeds"].items()}
+
+
 @dataclass(frozen=True)
 class Config:
-    """Hyperparameters for the RFS 2021 word2vec culture pipeline.
+    """Hyperparameters for the seed-expansion pipeline.
 
-    Two construction phases are composed:
+    Two construction phases compose to build the training corpus:
 
     * **Phase 1** (preprocessor + optional static MWE post-pass). Lemmatize,
       mask named entities as ``[NER:TYPE]``, join multi-word expressions.
@@ -65,22 +93,22 @@ class Config:
     * **Phase 2** (gensim Phrases). Learns corpus-specific bigrams and
       trigrams via co-occurrence statistics. On by default.
 
+    Seeds are required and have no default. Pass any mapping of
+    dimension name to seed words; the package is theory-agnostic.
+
     Attributes:
-        seeds: Mapping of dimension name to seed word list.
+        seeds: Mapping of dimension name to seed word list. Required.
         stopwords: Lowercased stopwords removed during cleaning.
         preprocessor: Backend to use for Phase 1. One of
             ``none`` (whitespace split only; fastest),
-            ``static`` (no parse; NLTK MWETokenizer with the packaged list;
-            Java-free; zero-ML),
+            ``static`` (NLTK MWETokenizer with the packaged list; Java-free),
             ``stanza`` (stanza.Pipeline; Python-native),
             ``corenlp`` (CoreNLP server via stanza.server; Java; paper-exact),
-            ``spacy`` (spaCy; recommended default; fastest parser and best
-            NER on the benchmark).
-        mwe_list: Curated MWE list applied AFTER the main preprocessor as a
-            second pass. Set to ``"finance"`` for the packaged list, to a
-            path for your own, or to ``None`` to skip.
-        spacy_model: Name of the spaCy model to load when
-            ``preprocessor="spacy"``.
+            ``spacy`` (spaCy; recommended; fastest parser and best NER).
+        mwe_list: Curated MWE list applied AFTER the main preprocessor as
+            a second pass. ``"finance"`` for the packaged list, a path for
+            your own, or ``None`` (default) to skip.
+        spacy_model: Name of the spaCy model when ``preprocessor="spacy"``.
         corenlp_memory: JVM heap for the CoreNLP server.
         corenlp_port: TCP port the CoreNLP server listens on.
         corenlp_timeout_ms: Per-request CoreNLP timeout.
@@ -97,39 +125,15 @@ class Config:
         dict_restrict_vocab: Restrict expansion to the top fraction of vocab.
         min_similarity: Discard expansion candidates below this cosine.
         tfidf_normalize: L2-normalize the tf-idf vector per document.
+        zca_whiten: Apply ZCA whitening to the dimension columns.
+        zca_epsilon: Numerical stabilizer for ZCA.
         random_state: Seed for Word2Vec.
     """
 
-    seeds: dict[str, list[str]] = field(
-        default_factory=lambda: {k: list(v) for k, v in CULTURE_SEEDS.items()}
-    )
+    seeds: dict[str, list[str]]
     stopwords: set[str] = field(default_factory=lambda: set(STOPWORDS_SRAF))
 
     # Phase 1: preprocessing.
-    #
-    # The pipeline has two construction phases, both on by default:
-    #   Phase 1a: parser-based syntactic MWE joining + NER masking.
-    #   Phase 2:  gensim ``Phrases`` statistical bigram / trigram learning.
-    #
-    # Default ``preprocessor="corenlp"``: Stanford CoreNLP via
-    # ``stanza.server.CoreNLPClient``. Matches the 2021 paper's pipeline,
-    # gives the best syntactic MWE coverage (76% of the test set), and
-    # scales near-linearly with JVM threads (5.7x at 8 threads on the
-    # benchmark). Requires a one-time Java install plus
-    # ``lmsy-w2v-rfs download-corenlp``.
-    #
-    # Backup options:
-    #   ``"spacy"``     Python-native; fastest (3.9 min on 1,393 docs);
-    #                    lose syntactic MWE coverage.
-    #   ``"stanza"``    Python-native; Pythonic successor to CoreNLP;
-    #                    slowest on CPU.
-    #   ``"static"``    Curated-list-only pass; no parser, no NER.
-    #   ``"none"``      Skip Phase 1a; rely on gensim ``Phrases`` alone.
-    #
-    # ``mwe_list`` is an optional SECOND pass that runs after the main
-    # preprocessor. It takes a newline-delimited list of MWEs and joins
-    # them with NLTK. ``"finance"`` loads the packaged earnings-call
-    # example list; a path loads your own; ``None`` (default) skips it.
     preprocessor: PreprocessorName = "corenlp"
     mwe_list: str | Path | None = None
     spacy_model: str = "en_core_web_sm"
@@ -138,9 +142,6 @@ class Config:
     corenlp_memory: str = "6G"
     corenlp_port: int = 9002
     corenlp_timeout_ms: int = 120_000
-    # ``n_cores`` is the JVM thread pool size (also reused by stanza and spaCy
-    # workers). 4 works well on an 8-core laptop without saturating the machine;
-    # bump to 8 on workstations.
     n_cores: int = 4
 
     # Phase 2: gensim Phrases
@@ -162,14 +163,27 @@ class Config:
 
     # Scoring
     tfidf_normalize: bool = False
-    # Optional ZCA whitening applied to every scored DataFrame.
-    # Decorrelates the dimension columns while preserving column names and
-    # approximate axis orientation. Off by default. Similar to the
-    # post-processing in Marketing-Measures/marketing-measures.
     zca_whiten: bool = False
     zca_epsilon: float = 1e-6
 
     random_state: int = 42
+
+    def __post_init__(self) -> None:
+        if not self.seeds:
+            raise ValueError(
+                "Config.seeds is required and must be non-empty. "
+                "Pass a mapping of dimension name to seed word list, e.g. "
+                'Config(seeds={"risk": ["risk", "uncertainty"], "growth": [...]}). '
+                "To reproduce the 2021 paper, use "
+                'load_example_seeds("culture_2021").'
+            )
+        for dim, words in self.seeds.items():
+            if not isinstance(dim, str) or not dim:
+                raise ValueError(f"Seed dimension names must be non-empty strings. Got: {dim!r}")
+            if not isinstance(words, list) or not words:
+                raise ValueError(
+                    f"Seeds for dimension {dim!r} must be a non-empty list of strings."
+                )
 
     def with_(self, **kwargs: Any) -> Config:
         """Return a copy with the given fields overridden.
@@ -200,10 +214,10 @@ def default_cache_dir() -> Path:
     return Path.home() / ".cache" / "lmsy_w2v_rfs"
 
 
-def load_seeds(source: str | Path | dict[str, list[str]] | None) -> dict[str, list[str]]:
+def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]]:
     """Load a seed dictionary from a dict, a JSON file, or a text file.
 
-    The framework is domain-agnostic: the seed dictionary is the *only*
+    The package is domain-agnostic: the seed dictionary is the *only*
     place where the user declares what concepts to measure. This helper
     accepts the three formats researchers typically have:
 
@@ -229,8 +243,7 @@ def load_seeds(source: str | Path | dict[str, list[str]] | None) -> dict[str, li
         innovation: innovation innovate creative
 
     Args:
-        source: A dict, a path to a ``.json`` or ``.txt`` file, or ``None``
-            to return the packaged 2021-paper five-dimension default.
+        source: A dict, or a path to a ``.json`` or ``.txt`` file.
 
     Returns:
         Mapping of dimension name to seed word list.
@@ -238,11 +251,16 @@ def load_seeds(source: str | Path | dict[str, list[str]] | None) -> dict[str, li
     Raises:
         FileNotFoundError: If ``source`` is a path that does not exist.
         ValueError: If the JSON file is not a ``dict[str, list[str]]``.
+        TypeError: If ``source`` is ``None``.
     """
     import json
 
     if source is None:
-        return {k: list(v) for k, v in CULTURE_SEEDS.items()}
+        raise TypeError(
+            "load_seeds(source) requires a dict, a JSON path, or a text path. "
+            "There is no built-in default. To reproduce the 2021 paper, use "
+            'load_example_seeds("culture_2021").'
+        )
     if isinstance(source, dict):
         return {k: list(v) for k, v in source.items()}
 

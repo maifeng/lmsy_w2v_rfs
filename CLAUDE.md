@@ -4,32 +4,44 @@ Project-local instructions for future Claude sessions. Read before touching any 
 
 ## What this package does
 
-`lmsy_w2v_rfs` is the PyPI packaging of Li, Mai, Shen & Yan (2021),
-"Measuring Corporate Culture Using Machine Learning," *RFS* 34(7):3265-3315,
-[doi.org/10.1093/rfs/hhaa079](https://doi.org/10.1093/rfs/hhaa079).
+`lmsy_w2v_rfs` is a generic word-embedding seed-expansion text scorer.
+You bring a corpus and a seed-word dictionary (one short list per
+concept); it trains Word2Vec on the corpus, expands each seed list via
+nearest-neighbor search, and scores every document with TF / TF-IDF /
+WFIDF variants.
 
-It turns a list of earnings-call transcripts into per-document scores on
-five culture dimensions (integrity, teamwork, innovation, respect, quality)
-by training a Word2Vec model, expanding seed words with nearest-neighbor
-search, and scoring documents with tf-idf variants.
+Originally a port of Li, Mai, Shen, Yan (2021), "Measuring Corporate
+Culture Using Machine Learning," *RFS* 34(7):3265-3315,
+[doi.org/10.1093/rfs/hhaa079](https://doi.org/10.1093/rfs/hhaa079). The
+package itself is **theory-agnostic** — `Config(seeds=...)` is required,
+no defaults. The 2021 paper's 5-dim culture dictionary is shipped only
+as a named example via `load_example_seeds("culture_2021")`.
 
 ## Public API (stable surface)
 
 ```python
 from lmsy_w2v_rfs import (
-    Pipeline,           # end-to-end orchestrator
-    Config,             # frozen dataclass of hyperparameters
-    CULTURE_SEEDS,      # 5 dims x 47 seed words
-    CULTURE_DIMS,
-    STOPWORDS_SRAF,
-    download_corenlp,   # optional, needs the [corenlp] extra
-    corenlp_server,     # context manager
+    Pipeline,            # end-to-end orchestrator
+    Config,              # frozen dataclass of hyperparameters; seeds= required
+    load_seeds,          # read dict / .json / .txt -> dict[str, list[str]]
+    load_example_seeds,  # opt-in named examples ("culture_2021")
+    STOPWORDS_SRAF,      # 120-token SRAF generic stopword list
+    download_corenlp,    # optional, needs the [corenlp] extra
 )
 ```
 
 `Pipeline` has stage methods `parse / clean / phrase / train / expand_dictionary / score`
 and a one-shot `run`. Stages are idempotent: rerunning does not redo work unless
 `force=True` is passed or the artifact is missing.
+
+Inspection + manual curation methods (between `expand_dictionary` and `score`):
+
+- `Pipeline.show_dictionary(top_k=10)` — pretty-print per-dim seeds + expansion.
+- `Pipeline.dictionary_preview(top_k=10)` — DataFrame view for notebook display.
+- `Pipeline.edit_dictionary(remove=, add=)` — programmatic curation; updates both in-memory dict and CSV.
+- `Pipeline.reload_dictionary()` — reread CSV after editing it in a spreadsheet.
+
+The 2021 paper's authors did manual curation (mostly removals) before scoring; both methods support that workflow.
 
 ## Two-phase construction, both configurable
 

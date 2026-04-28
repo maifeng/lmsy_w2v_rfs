@@ -61,3 +61,15 @@ def tiny_corpus() -> list[str]:
 def work_dir(tmp_path: Path) -> Path:
     """A per-test scratch directory."""
     return tmp_path / "run"
+
+
+@pytest.fixture(scope="session")
+def culture_seeds() -> dict[str, list[str]]:
+    """The 2021 paper's 5-dim culture seeds, used by pipeline tests.
+
+    Loaded via the public ``load_example_seeds`` helper so the test
+    suite exercises the same path workshop users will.
+    """
+    from lmsy_w2v_rfs import load_example_seeds
+
+    return load_example_seeds("culture_2021")

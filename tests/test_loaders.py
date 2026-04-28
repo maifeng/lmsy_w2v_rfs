@@ -9,18 +9,17 @@ import pandas as pd
 import pytest
 
 from lmsy_w2v_rfs import Config, Pipeline, load_seeds
-from lmsy_w2v_rfs.config import CULTURE_SEEDS
+
+
+_SEEDS = {"a": ["a", "b"], "c": ["c", "d"]}
 
 
 # ----- load_seeds -------------------------------------------------------
 
 
-def test_load_seeds_none_returns_default() -> None:
-    seeds = load_seeds(None)
-    assert set(seeds.keys()) == set(CULTURE_SEEDS.keys())
-    # Copy, not alias
-    seeds["integrity"].append("foo")
-    assert "foo" not in CULTURE_SEEDS["integrity"]
+def test_load_seeds_none_raises() -> None:
+    with pytest.raises(TypeError, match="requires a dict"):
+        load_seeds(None)  # type: ignore[arg-type]
 
 
 def test_load_seeds_dict_passthrough() -> None:
@@ -81,6 +80,7 @@ def test_load_seeds_file_not_found() -> None:
 
 def _cfg() -> Config:
     return Config(
+        seeds=_SEEDS,
         preprocessor="none", mwe_list=None,
         w2v_dim=10, w2v_epochs=2, w2v_min_count=1,
         phrase_min_count=2, phrase_threshold=1.0,
@@ -133,3 +133,8 @@ def test_from_jsonl(tmp_path: Path) -> None:
     p = Pipeline.from_jsonl(jp, work_dir=tmp_path / "run", config=_cfg())
     assert p._doc_ids == ["d1", "d2"]
     assert p._texts == ["alpha beta", "gamma delta"]
+
+
+def test_pipeline_requires_config(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="requires config"):
+        Pipeline(texts=["a"], work_dir=tmp_path / "run")

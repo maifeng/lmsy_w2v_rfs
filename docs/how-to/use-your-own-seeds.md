@@ -2,13 +2,16 @@
 
 ## Problem
 
-The packaged seeds reproduce the 2021 paper's five corporate-culture
-dimensions: integrity, teamwork, innovation, respect, quality. That is useful
-for culture research on earnings-call transcripts. For anything else, you need
-your own seeds. The framework itself is domain-agnostic: anything expressible
-as "a list of words per concept" works, whether the concepts are finance risk
-factors, policy topics, or a single sentiment axis. The trick is knowing how
-to plug your seeds in and which pitfalls break expansion silently.
+The package is theory-agnostic. Every run requires a user-supplied seed
+dictionary (`Config(seeds=...)`); there is no built-in default. Anything
+expressible as "a list of words per concept" works: finance risk factors,
+policy topics, ESG dimensions, a single sentiment axis. The trick is
+knowing how to plug your seeds in and which pitfalls break expansion
+silently.
+
+The 2021 paper's 5-dim culture dictionary is shipped only as a named
+example via `load_example_seeds("culture_2021")` for users who want to
+reproduce that paper.
 
 ## Solution
 
@@ -127,15 +130,17 @@ p.run(methods=("TFIDF",))
 A single-concept dictionary is still useful: TFIDF weighting gives you a
 corpus-calibrated score that you can threshold or rank.
 
-### Example 3: extend the culture dictionary with a new dimension
+### Example 3: reproduce the 2021 paper, then extend it
 
-To keep the paper's five dimensions and add a sixth (say, `sustainability`):
+To use the paper's five culture dimensions and add a sixth (say,
+`sustainability`):
 
 ```python
-from lmsy_w2v_rfs import Pipeline, Config, CULTURE_SEEDS
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
+base = load_example_seeds("culture_2021")
 extra = {"sustainability": ["sustainability", "emission", "carbon", "renewable"]}
-cfg = Config(seeds={**CULTURE_SEEDS, **extra})
+cfg = Config(seeds={**base, **extra})
 
 p = Pipeline(
     texts=[...],
@@ -146,8 +151,8 @@ p = Pipeline(
 p.run()
 ```
 
-`CULTURE_SEEDS` is a plain dict, so you can merge into it, drop keys from it,
-or copy-paste its contents into a JSON file and hand-edit.
+The example loader returns a fresh `dict[str, list[str]]`, so you can
+merge into it, drop keys, or dump it to a JSON file and hand-edit.
 
 ## Gotcha: seeds must be in the Word2Vec vocabulary
 

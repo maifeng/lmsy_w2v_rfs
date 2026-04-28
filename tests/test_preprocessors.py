@@ -24,9 +24,12 @@ SAMPLE = (
     "Our customer commitment is strong, with respect to long term value creation."
 )
 
+# Minimal stub seeds for tests that only construct Config, not run the pipeline.
+_SEEDS = {"demo": ["customer", "commitment"]}
+
 
 def test_no_op_preprocessor() -> None:
-    cfg = Config(preprocessor="none", mwe_list=None)
+    cfg = Config(seeds=_SEEDS, preprocessor="none", mwe_list=None)
     pp = build_preprocessor(cfg)
     sents = pp.process(SAMPLE)
     assert len(sents) >= 1
@@ -39,7 +42,7 @@ def test_no_op_preprocessor() -> None:
 
 
 def test_static_preprocessor_joins_curated_mwes() -> None:
-    cfg = Config(preprocessor="static", mwe_list="finance")
+    cfg = Config(seeds=_SEEDS, preprocessor="static", mwe_list="finance")
     pp = build_preprocessor(cfg)
     sents = pp.process(SAMPLE)
     flat = " ".join(tok for sent in sents for tok in sent)
@@ -72,7 +75,7 @@ def test_apply_mwe_list_with_none_returns_input() -> None:
 
 
 def test_unknown_preprocessor_name_raises() -> None:
-    cfg = Config(preprocessor="none", mwe_list=None).with_(preprocessor="bogus")  # type: ignore[arg-type]
+    cfg = Config(seeds=_SEEDS, preprocessor="none", mwe_list=None).with_(preprocessor="bogus")  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="Unknown preprocessor"):
         build_preprocessor(cfg)
 
@@ -110,7 +113,7 @@ def _has_corenlp_jars() -> bool:
 
 @pytest.mark.skipif(not _HAS_STANZA, reason="stanza not installed")
 def test_stanza_preprocessor_smoke() -> None:
-    cfg = Config(preprocessor="stanza", mwe_list=None)
+    cfg = Config(seeds=_SEEDS, preprocessor="stanza", mwe_list=None)
     pp = build_preprocessor(cfg)
     sents = pp.process(SAMPLE)
     flat = " ".join(tok for sent in sents for tok in sent)
@@ -120,7 +123,7 @@ def test_stanza_preprocessor_smoke() -> None:
 
 @pytest.mark.skipif(not _has_spacy_model("en_core_web_sm"), reason="spaCy model en_core_web_sm not installed")
 def test_spacy_preprocessor_smoke() -> None:
-    cfg = Config(preprocessor="spacy", spacy_model="en_core_web_sm", mwe_list=None)
+    cfg = Config(seeds=_SEEDS, preprocessor="spacy", spacy_model="en_core_web_sm", mwe_list=None)
     pp = build_preprocessor(cfg)
     sents = pp.process(SAMPLE)
     flat = " ".join(tok for sent in sents for tok in sent)
@@ -131,7 +134,7 @@ def test_spacy_preprocessor_smoke() -> None:
 @pytest.mark.skipif(not (_HAS_STANZA and _has_java() and _has_corenlp_jars()),
                     reason="corenlp extra / Java / jars not available")
 def test_corenlp_preprocessor_smoke() -> None:
-    cfg = Config(preprocessor="corenlp", mwe_list=None, corenlp_memory="3G")
+    cfg = Config(seeds=_SEEDS, preprocessor="corenlp", mwe_list=None, corenlp_memory="3G")
     pp = build_preprocessor(cfg)
     try:
         sents = pp.process(SAMPLE)

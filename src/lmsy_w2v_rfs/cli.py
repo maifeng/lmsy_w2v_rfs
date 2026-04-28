@@ -58,13 +58,14 @@ def _add_run_args(p: argparse.ArgumentParser) -> None:
     g_out.add_argument("--force", action="store_true",
                        help="Rerun every stage regardless of existing outputs.")
 
-    # ----- seeds ---------------------------------------------------------
+    # ----- seeds (REQUIRED) ---------------------------------------------
     g_seeds = p.add_argument_group("seeds")
-    g_seeds.add_argument("--seeds", default=None,
-                         help="Path to a seed dictionary file (.json or .txt). "
-                              "Omit to use the 2021 paper's 5-dim default "
-                              "(integrity, teamwork, innovation, respect, quality). "
-                              "See how-to/use-your-own-seeds.md.")
+    g_seeds.add_argument("--seeds", required=True,
+                         help="REQUIRED. Path to a seed dictionary file "
+                              "(.json or .txt). The package is theory-agnostic: "
+                              "you must supply your own seeds. To reproduce the "
+                              "2021 paper, export load_example_seeds('culture_2021') "
+                              "to a JSON file. See how-to/use-your-own-seeds.md.")
 
     # ----- Phase 1 -------------------------------------------------------
     g_p1 = p.add_argument_group("phase 1 (preprocessor)")
@@ -126,7 +127,7 @@ def _make_config(args: argparse.Namespace) -> Config:
     mwe_list: str | None = args.mwe_list
     if mwe_list and mwe_list.lower() == "none":
         mwe_list = None
-    seeds = load_seeds(args.seeds) if args.seeds else load_seeds(None)
+    seeds = load_seeds(args.seeds)
     return Config(
         seeds=seeds,
         preprocessor=args.preprocessor,
