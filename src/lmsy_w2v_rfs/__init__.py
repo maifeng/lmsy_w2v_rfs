@@ -67,6 +67,7 @@ from .dictionary import (
 )
 from .pipeline import Pipeline
 from .scoring import (
+    ScoringMethod,
     aggregate_to_firm_year,
     document_frequencies,
     iter_doc_level_corpus,
@@ -123,6 +124,7 @@ __all__ = [
     "expand_words_dimension_mean",
     "read_dict_csv",
     "write_dict_csv",
+    "ScoringMethod",
     "score_document",
     "score_documents",
     "document_frequencies",

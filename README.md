@@ -262,6 +262,7 @@ Config(
     n_cores=4,
     corenlp_memory="6G",
     corenlp_port=9002,
+    corenlp_timeout_ms=120_000,        # per-request CoreNLP timeout (ms)
 
     # Step 1b
     use_gensim_phrases=True,

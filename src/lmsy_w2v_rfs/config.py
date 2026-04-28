@@ -100,11 +100,13 @@ class Config:
         seeds: Mapping of dimension name to seed word list. Required.
         stopwords: Lowercased stopwords removed during cleaning.
         preprocessor: Backend to use for Phase 1. One of
-            ``none`` (whitespace split only; fastest),
-            ``static`` (NLTK MWETokenizer with the packaged list; Java-free),
+            ``corenlp`` (default; CoreNLP server via stanza.server; needs Java
+            and the ``[corenlp]`` extra; paper-exact),
+            ``spacy`` (faster on modern hardware; needs ``pip install spacy``),
             ``stanza`` (stanza.Pipeline; Python-native),
-            ``corenlp`` (CoreNLP server via stanza.server; Java; paper-exact),
-            ``spacy`` (spaCy; recommended; fastest parser and best NER).
+            ``static`` (NLTK MWETokenizer with the packaged list; Java-free),
+            ``none`` (whitespace split only; Java-free, for already-tokenized
+            input).
         mwe_list: Curated MWE list applied AFTER the main preprocessor as
             a second pass. ``"finance"`` for the packaged list, a path for
             your own, or ``None`` (default) to skip.

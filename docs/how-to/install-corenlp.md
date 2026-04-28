@@ -60,13 +60,14 @@ shells.
 ### 4. Smoke test
 
 ```python
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
+seeds = load_example_seeds("culture_2021")
 p = Pipeline(
     texts=["Innovation and teamwork drive our roadmap at Apple Inc."],
     doc_ids=["doc1"],
     work_dir="runs/smoke",
-    config=Config(preprocessor="corenlp", n_cores=2, use_gensim_phrases=False),
+    config=Config(seeds=seeds, preprocessor="corenlp", n_cores=2, use_gensim_phrases=False),
 )
 p.parse()
 print((p.work_dir / "parsed" / "sentences.txt").read_text())
@@ -84,13 +85,14 @@ Switch to a Python-only backend. Install the corresponding extra and set
 
 ```python
 # Python-native, fastest parser, best NER. Drops syntactic MWE coverage.
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
+seeds = load_example_seeds("culture_2021")
 p = Pipeline(
     texts=[...],
     doc_ids=[...],
     work_dir="runs/nojava",
-    config=Config(preprocessor="spacy", spacy_model="en_core_web_sm", n_cores=8),
+    config=Config(seeds=seeds, preprocessor="spacy", spacy_model="en_core_web_sm", n_cores=8),
 )
 ```
 

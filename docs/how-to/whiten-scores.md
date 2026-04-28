@@ -24,9 +24,10 @@ package uses for their firm-level measures.
 ### Turn it on in `Config`
 
 ```python
-from lmsy_w2v_rfs import Pipeline, Config
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 
-cfg = Config(zca_whiten=True)
+seeds = load_example_seeds("culture_2021")
+cfg = Config(seeds=seeds, zca_whiten=True)
 p = Pipeline.from_csv("transcripts.csv", work_dir="runs/x", config=cfg)
 p.run()
 df = p.score_df("TFIDF")   # columns are already whitened

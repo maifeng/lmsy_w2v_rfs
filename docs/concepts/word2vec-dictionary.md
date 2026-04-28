@@ -22,7 +22,7 @@ flowchart LR
 
 ## One dimension, step by step
 
-Take the packaged `integrity` seeds: `integrity`, `accountable`, `ethic`, `ethical`, `ethics`, `honesty`, `honorable`, `honor`, `integrities`, and a handful more (10 total). After Word2Vec training:
+Take the packaged `integrity` seeds: `integrity`, `ethic`, `ethical`, `accountable`, `accountability`, `trust`, `honesty`, `honest`, `honestly`, `fairness`, `responsibility`, `responsible`, `transparency`, `transparent` (14 total). After Word2Vec training:
 
 1. **Average the vectors.** Look up each seed in `w2v.wv.key_to_index`. Seeds missing from the vocabulary are silently skipped. The remaining vectors are averaged into a 300-dimensional "integrity prototype."
 2. **Query near neighbors.** Call `w2v.wv.most_similar(positive=[mean_vec], topn=n_words_dim)` with `n_words_dim=500` by default. The result is a list of `(word, cosine)` pairs. `Config.dict_restrict_vocab` can cap the search to the top fraction of the vocabulary by frequency; `Config.min_similarity` trims the tail below a cosine threshold.
