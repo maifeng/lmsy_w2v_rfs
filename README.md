@@ -1,6 +1,11 @@
-# lmsy_w2v_rfs
+# Seed words expansion and measurements using Word2Vec
 
-Build a **corpus-specific measurement dictionary with Word2Vec**, ported from Li, Mai, Shen, Yan (2021). Give the package a corpus and a short seed list per concept; it learns the multi-word phrases your corpus uses, expands each seed list into a ranked dictionary of words and phrases, lets you curate that dictionary by hand, and scores every document against it. The package is theory-agnostic: any concept expressible as a list of seed words works.
+Builds a **corpus-specific measurement dictionary with Word2Vec**, ported from Li, Mai, Shen, Yan (2021). For each concept you want to measure in your corpus:
+
+- **You provide** a short seed-word list per concept.
+- **The package builds** a ranked dictionary of the words and multi-word phrases your corpus uses to express that concept.
+- **You curate** the dictionary: inspect, drop noise, add domain words.
+- **The package scores** every document by weighted hits against the curated dictionary.
 
 If you find this library useful in your research, please cite:
 
@@ -93,7 +98,7 @@ The package implements the four-step construction procedure of Li et al. (2021).
 
 ### Step 1: Two-step phrase construction
 
-The 2021 paper, footnote 5: phrases convey cultural meaning that single words cannot. The package extracts phrases in two steps that target different kinds of phrases.
+Phrases carry meaning that single words cannot. The package extracts them in two complementary steps targeting different kinds of phrases.
 
 **Step 1a, parser-based (general-English phrases).** A dependency parser identifies fixed multiword expressions (`with_respect_to`, `rather_than`) and compound words (`intellectual_property`, `healthcare_provider`). The parser also lemmatizes (`stocks` → `stock`) and masks named entities as `[NER:ORG]` placeholders so proper nouns do not bias the vector space. The 120-token SRAF generic stopword list is removed in the cleaning pass that follows.
 
@@ -105,13 +110,13 @@ The 2021 paper, footnote 5: phrases convey cultural meaning that single words ca
 | `"static"` | NLTK `MWETokenizer` over a curated list | base install |
 | `"none"` | whitespace tokenize, lowercase only | base install |
 
-**Step 1b, statistical (corpus-specific phrases).** After Step 1a, gensim's `Phrases` scans the parsed corpus for statistically significant adjacent-token co-occurrences and joins them with `_`. A second pass over the bigram-joined corpus learns trigrams. This step identifies recurring collocations specific to the corpus. On the paper's earnings-call corpus it surfaces `forward_looking_statement` and `cost_of_capital`; on a Glassdoor-review corpus it surfaces `work_life_balance` and `toxic_environment`.
+**Step 1b, statistical (corpus-specific phrases).** After Step 1a, gensim's `Phrases` scans the parsed corpus for statistically significant adjacent-token co-occurrences and joins them with `_`. A second pass over the bigram-joined corpus learns trigrams. This step identifies recurring collocations specific to the corpus: an earnings-call corpus surfaces `forward_looking_statement` and `cost_of_capital`; a Glassdoor-review corpus surfaces `work_life_balance` and `toxic_environment`.
 
 ```python
 Config(
     use_gensim_phrases=True,
     phrase_passes=2,            # 1 = bigrams; 2 = bigrams + trigrams
-    phrase_min_count=10,        # paper's threshold on a ~270k-doc corpus
+    phrase_min_count=10,        # works on a ~270k-doc corpus
     phrase_threshold=10.0,      # for smaller corpora try 3 / 5.0
 )
 ```
@@ -120,7 +125,7 @@ The phrase-tagged corpus is written to `work_dir/corpora/pass2.txt` and can be o
 
 ### Step 2: Word2Vec
 
-`Pipeline.train()` fits a `gensim.models.Word2Vec` on the phrase-tagged corpus. Every word and phrase receives a 300-dimensional vector. The 2021 paper's defaults are baked in:
+`Pipeline.train()` fits a `gensim.models.Word2Vec` on the phrase-tagged corpus. Every word and phrase receives a 300-dimensional vector. Defaults match the 2021 paper:
 
 ```python
 Config(w2v_dim=300, w2v_window=5, w2v_min_count=5, w2v_epochs=20)
@@ -133,9 +138,9 @@ The model is saved at `work_dir/models/w2v.mod` and is available as `p.w2v` for 
 `Pipeline.expand_dictionary()` builds the per-concept dictionary by:
 
 1. Averaging the in-vocabulary seed vectors for the concept.
-2. Taking the top `n_words_dim` (paper's default: 500) tokens by cosine similarity to that mean.
-3. Resolving cross-loadings: from the paper, "if a word appears in dictionaries for multiple cultural values, only include it in the value with the highest cosine similarity to the average of seed word vectors for that value."
-4. Dropping `[NER:*]` placeholders (the paper does not consider named entities).
+2. Taking the top `n_words_dim` (default 500) tokens by cosine similarity to that mean.
+3. Resolving cross-loadings: a token close to multiple concepts is assigned to the one whose seed mean it is closest to.
+4. Dropping `[NER:*]` placeholders so named entities never enter the dictionary.
 
 The result is written to `work_dir/outputs/expanded_dict.csv`, one column per concept, sorted by descending similarity to the seed mean.
 
@@ -146,7 +151,7 @@ p.dictionary_preview(top_k=10)      # DataFrame for notebook display
 
 ### Step 4: Manual dictionary inspection
 
-The 2021 paper, Section 3.2: *"we manually inspect all the words in the auto-generated dictionary and exclude words that do not fit."* Nearest-neighbor expansion surfaces noise: off-topic terms, industry-specific outliers, words too general to be informative. The paper's authors removed them by hand. The package supports two ways to do this; both update the in-memory dictionary and the on-disk CSV in one call.
+Nearest-neighbor expansion surfaces noise: off-topic terms, industry-specific outliers, words too general to be informative. Two ways to remove them, both atomic across the in-memory dictionary and the on-disk CSV:
 
 ```python
 # Programmatic, replicable in a notebook:
@@ -167,11 +172,11 @@ Cached scores are dropped after curation. Call `p.score()` to rescore against th
 
 ## Scoring
 
-A document's score on a concept is the sum of TF-IDF weights for every dictionary token present in the document, divided by total document length (the 2021 paper, Section 3.3).
+A document's score on a concept is the sum of TF-IDF weights for every dictionary token present in the document, divided by total document length.
 
-| Method | Weight per dictionary hit | In paper |
+| Method | Weight per dictionary hit | Source |
 |---|---|---|
-| `TFIDF` | `tf · log(N/df)` | yes (the paper's method) |
+| `TFIDF` | `tf · log(N/df)` | 2021 paper |
 | `TF` | `tf` | extension |
 | `WFIDF` | `(1 + log tf) · log(N/df)` | extension |
 | `TFIDF+SIMWEIGHT`, `WFIDF+SIMWEIGHT` | × `1/ln(2 + rank)` | extension |
@@ -206,6 +211,34 @@ Config(seeds=load_seeds("my_seeds.json"))     # or .txt, or pass a dict directly
 ```
 
 CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv --out runs/x`.
+
+---
+
+## Large corpora
+
+Most stages stream through disk rather than holding the corpus in memory. `parse` writes one parsed sentence per line to `work_dir/parsed/sentences.txt`; `clean` reads and writes line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The 2021 paper trained on roughly 270,000 earnings-call transcripts on a single workstation.
+
+For a directory tree of plain-text files (one document per file, common for SEC filings, conference calls, court opinions, etc.):
+
+```python
+from lmsy_w2v_rfs import Pipeline, Config, load_seeds
+
+p = Pipeline.from_directory(
+    "/data/sec_filings/",
+    pattern="**/*.txt",                         # recursive glob
+    work_dir="runs/sec",
+    config=Config(
+        seeds=load_seeds("my_seeds.txt"),
+        preprocessor="spacy",                   # or "corenlp" for paper-faithful
+        n_cores=8,
+    ),
+)
+p.run()
+```
+
+Each file becomes one document; the file's stem (`AAPL_2024.txt` → `"AAPL_2024"`) is the document ID. The factory still loads file contents into a Python list at construction, so peak memory scales with total corpus size at that moment.
+
+For corpora that exceed RAM (millions of long documents), split the directory into shards of ~100k files, run `parse` separately per shard, concatenate each shard's `parsed/sentences.txt` and `parsed/sentence_ids.txt` into a merged `work_dir`, then run `clean`, `phrase`, `train`, `expand_dictionary`, and `score` once on the merged corpus. The stage methods read from disk and are idempotent, so this kind of manual orchestration works without subclassing.
 
 ---
 
