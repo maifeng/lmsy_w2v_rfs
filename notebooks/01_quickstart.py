@@ -233,17 +233,30 @@ for dim in cfg.dims:
         print(f"  {dim:12s}: {nz:.0%} of reviews")
 
 # %% [markdown]
-# ## 10. Compare scoring methods
+# ## 10. ZCA whitening for downstream regression
 #
-# Three variants are supported: raw term frequency (TF), TF-IDF (the
-# 2021 paper's choice), and weighted-frequency IDF (WFIDF). The choice
-# rarely changes the ranking but affects the scale.
+# Raw dimension scores are correlated: documents praising teamwork tend
+# to praise innovation too. If your next step is a regression that uses
+# the dimension scores as regressors, that covariance becomes
+# multicollinearity. ZCA (zero-phase component analysis) whitening
+# linearly transforms the dimension columns so their covariance becomes
+# the identity (decorrelated, unit variance). Column names are
+# preserved: `integrity` still means integrity, not PC1.
 
 # %%
-p.score(methods=("TF", "TFIDF", "WFIDF"))
-for method in ("TF", "TFIDF", "WFIDF"):
-    s = p.score_df(method)
-    print(f"{method:8s} mean {cfg.dims[0]} = {s[cfg.dims[0]].mean():.4f}")
+import numpy as np
+from lmsy_w2v_rfs import zca_whiten
+
+dim_cols = [d for d in cfg.dims if d in scores.columns]
+
+print("Covariance BEFORE whitening:")
+cov_before = np.cov(scores[dim_cols].to_numpy(), rowvar=False)
+print(pd.DataFrame(cov_before.round(3), index=dim_cols, columns=dim_cols))
+
+scores_white = zca_whiten(scores, dims=dim_cols)
+print("\nCovariance AFTER ZCA whitening (identity = decorrelated):")
+cov_after = np.cov(scores_white[dim_cols].to_numpy(), rowvar=False)
+print(pd.DataFrame(cov_after.round(3), index=dim_cols, columns=dim_cols))
 
 # %% [markdown]
 # ## 11. Bring your own seeds (custom dimensions)
@@ -281,14 +294,3 @@ p_custom.score_df("TFIDF").head()
 import lmsy_w2v_rfs
 print(lmsy_w2v_rfs.__paper__)
 
-# %% [markdown]
-# ## 13. Related packages
-#
-# This workshop covers three tools on the **same 2,000 Glassdoor reviews**.
-# Pick the one that fits your research question:
-#
-# | Package | Best for | Runtime |
-# |---|---|---|
-# | **`lmsyz_genai_ie_rfs`** | Structured extraction: culture type, causes, consequences, causal triples | Requires an LLM API key |
-# | **`spar_measure`** | Scoring short texts on a custom semantic scale (e.g., CVF dimensions) | Local CPU/GPU, no API key |
-# | **`lmsy_w2v_rfs`** (this notebook) | Word-list-driven scoring with corpus-trained Word2Vec expansion | Local CPU, no API key |
