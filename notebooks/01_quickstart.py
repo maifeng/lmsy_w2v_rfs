@@ -88,8 +88,11 @@ corpus[["review_id", "text"]].head(3)
 # %% [markdown]
 # ## 4. Configure the pipeline
 #
-# `preprocessor="none"` skips Java/CoreNLP entirely. The gensim Phrases
-# pass still learns corpus-specific bigrams and trigrams.
+# `preprocessor="none"` (the default) does no parsing — it splits on
+# whitespace and lowercases, so it needs no extra dependencies and runs
+# anywhere. The gensim Phrases pass still learns corpus-specific bigrams and
+# trigrams. For lemmatization and named-entity masking, switch to a parser
+# backend; section 12 shows how, using spaCy (Python-only, runs on Colab).
 #
 # With 2,000 short reviews we use 100-dim vectors and expand to 50 words
 # per dimension. For a full earnings-call corpus (100k+ documents), the
@@ -153,6 +156,16 @@ p.dictionary_preview(top_k=10)
 # Both update the in-memory dictionary and the on-disk CSV in one call.
 # Cached scores are dropped automatically; rerun `p.score()` afterward.
 
+# %% [markdown]
+# To decide *what* to curate, look at which words actually drive each
+# dimension. `word_contributions` returns each word's share of its
+# dimension's score across the corpus; high-contribution words that are
+# off-concept are the prime candidates to remove.
+
+# %%
+contrib = p.word_contributions("TFIDF")
+contrib[contrib.dimension == "quality"].head(12)
+
 # %%
 def correlations(scores_df: pd.DataFrame) -> dict[str, float]:
     """Correlate each dimension column with rating_culture.
@@ -201,6 +214,13 @@ p.show_dictionary(top_k=10)
 
 # %% [markdown]
 # ## 8. Inspect scores
+#
+# We score with `TFIDF` — the measure used in the paper: each dictionary
+# word counts as `tf * log(N/df)`, so distinctive words count more than
+# generic ones. Other methods are available: `TF` (raw counts), `WFIDF`
+# (sublinear `tf`), and `TFIDF+SIMWEIGHT` / `WFIDF+SIMWEIGHT` (additionally
+# weight words by similarity to the seeds). See the scoring docs for the
+# formulas.
 
 # %%
 scores = p.score_df("TFIDF")
@@ -279,7 +299,35 @@ p_custom.show_dictionary(top_k=10)
 p_custom.score_df("TFIDF").head()
 
 # %% [markdown]
-# ## 12. Citation
+# ## 12. Switch the parser: spaCy (lemmatization + named-entity masking)
+#
+# Everything above used the default `none` backend (whitespace + lowercase).
+# To lemmatize (so `integrities` matches the seed `integrity`) and mask
+# entities like firm names, switch to a parser. spaCy is Python-only and
+# runs on Colab — no Java needed. Install the extra and a small model, then
+# set `preprocessor="spacy"`. (For exact paper reproduction use
+# `preprocessor="corenlp"`, which needs Java and a ~1 GB download.)
+
+# %%
+# Colab: install the spaCy extra and a small English model.
+# !pip install -q "lmsy_w2v_rfs[spacy]"
+# !python -m spacy download en_core_web_sm
+
+# %%
+spacy_cfg = cfg.with_(preprocessor="spacy", spacy_model="en_core_web_sm")
+p_spacy = Pipeline(
+    texts=texts, doc_ids=doc_ids, work_dir="runs/glassdoor_spacy", config=spacy_cfg
+)
+p_spacy.run(methods=("TFIDF",))
+p_spacy.show_dictionary(top_k=10)
+
+# %% [markdown]
+# The dictionary now contains lemmatized tokens, and entity placeholders
+# (`[ner:org]`, `[ner:person]`) are kept out of it. Compare with the `none`
+# dictionary above to see the effect of parsing.
+
+# %% [markdown]
+# ## 13. Citation
 #
 # If you use this package in research, please cite the origin paper:
 #
