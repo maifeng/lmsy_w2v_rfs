@@ -216,12 +216,16 @@ A document's score on a concept is the sum of TF-IDF weights for every dictionar
 
 | Method | Weight per dictionary hit | Source |
 |---|---|---|
-| `TFIDF` | `tf · log(N/df)` | 2021 paper |
-| `TF` | `tf` | extension |
-| `WFIDF` | `(1 + log tf) · log(N/df)` | extension |
-| `TFIDF+SIMWEIGHT`, `WFIDF+SIMWEIGHT` | × `1/ln(2 + rank)` | extension |
+| `TFIDF` | `tf · log(N/df)` | 2021 paper (the published measure) |
+| `TF` | `tf` | alternative |
+| `WFIDF` | `(1 + log tf) · log(N/df)` | alternative (sublinear `tf`) |
+| `TFIDF+SIMWEIGHT`, `WFIDF+SIMWEIGHT` | × `1/ln(2 + rank)` | rank-weighted variant |
 
-`SIMWEIGHT` variants additionally down-weight tokens further from the seed mean (rank in the expanded dictionary).
+The `+SIMWEIGHT` variants additionally weight each word by its **rank** in the
+similarity-ordered dictionary (`1/ln(2 + rank)`), so words nearer the seed
+centroid count more and peripheral expansion words count less. This rank-based
+similarity weighting is the scheme several studies building on the method have
+adopted. It is rank-based, not a function of the raw cosine-similarity value.
 
 ```python
 p.score(methods=("TFIDF",))
