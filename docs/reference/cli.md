@@ -125,6 +125,7 @@ lmsy-w2v-rfs download-corenlp             # one time
 lmsy-w2v-rfs run \
   --input transcripts.csv --input-format csv \
   --text-col transcript --id-col call_id \
+  --seeds my_seeds.txt \
   --out runs/corenlp8 \
   --preprocessor corenlp --n-cores 8
 ```

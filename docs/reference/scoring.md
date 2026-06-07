@@ -47,6 +47,15 @@ row per document.
 
 ::: lmsy_w2v_rfs.score_documents
 
+## word_contributions
+
+Decomposes each dimension's corpus-level score into per-word contributions
+(absolute, relative share, and cumulative share), so you can check that a
+dimension is driven by semantically coherent words. `Pipeline.word_contributions`
+wraps this and writes `outputs/word_contributions_<METHOD>.csv`.
+
+::: lmsy_w2v_rfs.word_contributions
+
 ## aggregate_to_firm_year
 
 Joins document-level scores to a firm-year mapping, normalizes each dimension

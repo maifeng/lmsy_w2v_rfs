@@ -10,7 +10,7 @@ Three complementary tests, all run on the same hardware (Apple Silicon M-series 
 
 1. **60-phrase MWE test**. Hand-labeled gold MWEs across six categories: idiomatic (10), grammaticalized fixed (13), compound nouns (10), business jargon (11), phrasal verbs (8), named entities (8). A backend "catches" a phrase if it proposes a join whose endpoints both fall inside the gold MWE.
 2. **50-sentence NER test**. Hand-labeled entity spans and types across person, organization, location, money, date, and other categories. Scored on both span recall and type accuracy.
-3. **300-document end-to-end bakeoff**. Real earnings-call transcripts, 6.7 MB, parsed with each backend at `n_cores=8`. Measured wall time, CPU utilization, entity count, and sentence count.
+3. **1,393-document end-to-end bakeoff**. The RFS 2021 sample of real earnings-call transcripts, parsed with each backend at `n_cores=8`. Measured wall time, CPU utilization, entity count, and sentence count.
 
 ---
 
@@ -66,7 +66,7 @@ Practical consequence: any parser-based preprocessor inherits this ceiling. If y
 
 **stanza (EWT)** is the Python-native middle ground. Strong on compounds and phrasal verbs, weaker on `fixed` patterns (4/13). Best when you need POS tags and a modern neural parser without Java. Worst at: CPU throughput. Stanza on CPU takes ~5 hours on the full 1,393-doc corpus because PyTorch neural parsing is slow without GPU acceleration, and stanza does not yet support Apple Silicon MPS.
 
-**spaCy** is the fastest backend by a wide margin (3.9 min on 1,393 docs with `en_core_web_sm`). Best NER by span recall (100%) and type accuracy (96%). Worst at: syntactic MWE. The English model's ClearNLP-to-UD converter does not emit `fixed` or `compound:prt` at all, so syntactic MWE recall is 0%. spaCy is a good default for workshop and classroom settings where Java is unavailable and where Phase 2 (gensim `Phrases`) plus an optional static list can pick up the MWE slack.
+**spaCy** is the fastest backend by a wide margin (3.9 min on 1,393 docs with `en_core_web_sm`). Best NER by span recall (100%) and type accuracy (96%). Worst at: syntactic MWE. The English model's ClearNLP-to-UD converter does not emit `fixed` or `compound:prt` at all, so syntactic MWE recall is 0%. spaCy is a good choice for workshop and classroom settings where Java is unavailable and where Phase 2 (gensim `Phrases`) plus an optional static list can pick up the MWE slack.
 
 **static** is a precision tool backed by NLTK's `MWETokenizer`. 100% recall on the list, 0% off the list. Best when you know the exact set of MWEs you care about. Worst at: discovery. It cannot find MWEs you did not already think of.
 
@@ -74,11 +74,12 @@ Practical consequence: any parser-based preprocessor inherits this ceiling. If y
 
 ---
 
-## When to switch from the default
+## Choosing a backend
 
-Switch from `corenlp` (the default) to:
+The default is `none` (zero dependencies, no Java). Switch to:
 
-- **`spacy`** when Java is unavailable (Colab classroom, slim Docker image, CI runner), when wall time matters more than MWE quality, or when the downstream analysis needs the strongest NER masking. Pair with `use_gensim_phrases=True` and optionally a curated `mwe_list` to recover some MWE coverage.
+- **`corenlp`** for paper-faithful reproduction and the highest syntactic MWE coverage. Needs Java 8+ and a one-time ~1 GB download.
+- **`spacy`** when you want richer parsing than `none` without Java (Colab classroom, slim Docker image, CI runner), when wall time matters more than MWE quality, or when the downstream analysis needs the strongest NER masking. Pair with `use_gensim_phrases=True` and optionally a curated `mwe_list` to recover some MWE coverage.
 - **`stanza`** when you need a Python-native pipeline with modern UD labels and do not need the JVM. Only viable on GPU or on small corpora (< 100 docs) if you are on CPU. Stanza is actively developed at Stanford NLP and receives new neural capabilities first; CoreNLP is in maintenance mode.
 - **`static`** when your domain has a known set of MWEs and you want deterministic, debuggable behavior. Combine with `preprocessor="static"` and pass `mwe_list="finance"` or your own path.
 - **`none`** when your text is already tokenized and lemmatized upstream, or when you are iterating on the Word2Vec stage and want to eliminate parsing time.

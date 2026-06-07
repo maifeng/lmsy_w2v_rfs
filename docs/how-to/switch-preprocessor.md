@@ -19,11 +19,11 @@ Set `Config(preprocessor=...)` to one of `"corenlp"`, `"spacy"`, `"stanza"`,
 
 | Your situation | Recommended preprocessor |
 |---|---|
-| Java available, want paper-faithful results | `"corenlp"` (default) |
-| No Java, want speed, NER matters | `"spacy"` |
+| Just trying the package / already-tokenized input | `"none"` (default) |
+| Java available, want paper-faithful results | `"corenlp"` |
+| No Java, want speed and NER masking | `"spacy"` |
 | No Java, want modern UD parser, ~5 hours is fine | `"stanza"` |
 | No parser dependencies, have a curated MWE list | `"static"` |
-| Already-lemmatized input, whitespace tokenize only | `"none"` |
 
 ### Syntactic MWE recall (from the 60-phrase benchmark)
 
@@ -46,7 +46,7 @@ When you cannot use CoreNLP, see [Preprocessor comparison](../explanation/mwe-co
 
 ### Config snippets per backend
 
-**CoreNLP (default, paper-faithful):**
+**CoreNLP (paper-faithful, opt-in; needs Java):**
 
 ```python
 from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds

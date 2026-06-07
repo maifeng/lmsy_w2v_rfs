@@ -147,6 +147,17 @@ The lower-level `aggregate_to_firm_year` function takes `id_col=`,
 `Pipeline.firm_year` does not expose those and always expects the canonical
 three names.
 
+## See also: what drives a score?
+
+When a firm-year cell looks surprisingly high or low, `Pipeline.word_contributions(method)`
+shows which dictionary words drive each dimension across the corpus (absolute,
+relative, and cumulative share), writing `outputs/word_contributions_<METHOD>.csv`:
+
+```python
+contrib = p.word_contributions("TFIDF")
+contrib[contrib.dimension == "integrity"].head(10)
+```
+
 ## Related
 
 - [Use your own seeds](use-your-own-seeds.md)

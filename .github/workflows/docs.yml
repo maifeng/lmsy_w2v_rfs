@@ -1,0 +1,30 @@
+name: docs
+
+# Build the MkDocs site and publish it to the gh-pages branch on every push
+# to main. This is the publication step for https://maifeng.github.io/lmsy_w2v_rfs/.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "README.md"
+      - "src/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install package + docs dependencies
+        run: pip install -e ".[docs]"
+      - name: Build and deploy to gh-pages
+        run: mkdocs gh-deploy --force --strict

@@ -4,15 +4,13 @@ This page explains the "why" behind the load-bearing choices in `lmsy_w2v_rfs`. 
 
 ---
 
-## Why CoreNLP is the default preprocessor
+## Why `none` is the default preprocessor (and CoreNLP is the paper-faithful opt-in)
 
-CoreNLP is the default because it is the only backend that gets both high syntactic MWE coverage and strong multi-worker scaling on the benchmark we ran.
+The default is `preprocessor="none"`: a bare `pip install lmsy_w2v_rfs` runs the whole pipeline with no Java, no model download, and no extra dependencies. That makes the first run friction-free, which matters more than parsing quality for someone just trying the package — and `none` still produces sensible dictionaries because gensim `Phrases` (Phase 2) and Word2Vec do most of the work regardless of the Phase 1 backend.
 
-On the 60-phrase test set, CoreNLP 4.5 catches 16 of 21 syntactic MWEs (76%), compared with 12 of 21 for stanza (57%) and 0 of 21 for spaCy. The gap is in UD v2 `fixed` patterns like `with_respect_to`, `in_spite_of`, `due_to`, which CoreNLP's PTB-to-UD converter encodes as hand-written rules. Stanza and spaCy have to predict these from treebank training data where the patterns are sparse.
+CoreNLP is the recommended opt-in when you want the paper's exact Phase 1 behavior. On the 60-phrase test set, CoreNLP 4.5 catches 16 of 21 syntactic MWEs (76%), compared with 12 of 21 for stanza (57%) and 0 of 21 for spaCy. The gap is in UD v2 `fixed` patterns like `with_respect_to`, `in_spite_of`, `due_to`, which CoreNLP's PTB-to-UD converter encodes as hand-written rules; stanza and spaCy must predict these from treebank data where the patterns are sparse.
 
-On throughput, CoreNLP's JVM thread pool scales 5.74x from 1 to 8 threads because all threads share one loaded model. That gets the full 1,393-document RFS 2021 sample corpus down to 13 minutes at `n_cores=8`. spaCy is faster in wall time (~4 minutes) but pays with 0% syntactic MWE recall. CoreNLP wins on the cost-benefit curve we care about.
-
-The friction is real: you need Java 8+ on `$PATH` and a ~1 GB one-time archive download. We accept that friction because this is a research package, not a production tool. Users who cannot install Java have four other preprocessors to pick from.
+On throughput, CoreNLP's JVM thread pool scales 5.74x from 1 to 8 threads because all threads share one loaded model, processing the full 1,393-document RFS 2021 sample corpus in 11.7 minutes at `n_cores=8`. spaCy is faster (~4 minutes) but with 0% syntactic MWE recall. The cost of CoreNLP is real — Java 8+ on `$PATH` and a ~1 GB one-time download — so it is opt-in, not the default. Users who want richer parsing without Java should reach for `spacy`.
 
 ---
 
@@ -44,9 +42,9 @@ Preprocessor selection is a trade-off surface with three axes: Java vs Python-on
 | `static` | no | 100% on the list, 0% off the list | fast |
 | `spacy` | no | 0% | 3.9 min on 1,393 docs |
 | `stanza` | no | 57% | ~5 hours on 1,393 docs on CPU |
-| `corenlp` | yes | 76% | 13 min on 1,393 docs |
+| `corenlp` | yes | 76% | 11.7 min on 1,393 docs |
 
-Shipping all five lets users pick based on their actual constraint. Classroom Colab notebooks pick `spacy` because Java is absent. Paper-exact reproducers pick `corenlp`. Users with pre-lemmatized text pick `none`. The underlying Word2Vec, expansion, and scoring code is identical across backends, so switching one flag changes the upstream parser without touching the downstream analysis.
+Shipping all five lets users pick based on their actual constraint. The zero-dependency `none` is the default for first runs and already-tokenized text. Classroom Colab notebooks pick `spacy` because Java is absent. Paper-exact reproducers pick `corenlp`. The underlying Word2Vec, expansion, and scoring code is identical across backends, so switching one flag changes the upstream parser without touching the downstream analysis.
 
 ---
 
@@ -54,9 +52,9 @@ Shipping all five lets users pick based on their actual constraint. Classroom Co
 
 `Pipeline` exposes six stages (`parse`, `clean`, `phrase`, `train`, `expand_dictionary`, `score`) and writes each stage's output under `work_dir/`. A rerun of the same `work_dir` resumes from the latest stage that has complete artifacts; stages with `force=True` redo from scratch.
 
-Researchers iterate. A Word2Vec run with the wrong `w2v_dim` should not force redo of the 13-minute CoreNLP parse. A prompt-engineering pass on the seed dictionary should not re-tokenize 1,393 documents. Forcing every stage to redo on every invocation is the single fastest way to make a research package unusable.
+Researchers iterate. A Word2Vec run with the wrong `w2v_dim` should not force redo of the 11.7-minute CoreNLP parse. A prompt-engineering pass on the seed dictionary should not re-tokenize 1,393 documents. Forcing every stage to redo on every invocation is the single fastest way to make a research package unusable.
 
-The idempotence is implemented by writing each stage's output to a stable path under `work_dir` and checking for its existence at stage entry. Simple, visible, easy to debug. Users can delete one artifact to rerun exactly one stage.
+The idempotence is implemented by writing each stage's output to a stable path under `work_dir` and checking for its existence at stage entry. The `parse` and `clean` stages write to a temporary file and atomically rename it on success, so a crash never leaves a half-written file that the existence check would mistake for a completed stage. Users can delete one artifact to rerun exactly one stage.
 
 ---
 
@@ -66,8 +64,8 @@ Seeds are passed to `Config` as a plain Python dict; there is no built-in defaul
 
 ```python
 cfg = Config(seeds={
-    "risk":   ["risk", "uncertainty", "volatility", "hedge"],
-    "growth": ["growth", "expand", "expansion", "scale"],
+    "innovation":   ["innovation", "innovative", "creativity", "creative"],
+    "teamwork":     ["teamwork", "collaboration", "collaborate", "supportive"],
 })
 ```
 

@@ -2,7 +2,7 @@
 
 [![Open in Colab](https://img.shields.io/badge/Colab-quickstart-orange?logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb)
 [![PyPI version](https://img.shields.io/pypi/v/lmsy_w2v_rfs.svg)](https://pypi.org/project/lmsy_w2v_rfs/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/maifeng/lmsy_w2v_rfs/blob/main/LICENSE)
 
 `lmsy_w2v_rfs` implements the Word2Vec seed-expansion method for document scoring
 introduced in Li, Mai, Shen, and Yan (2021). A researcher specifies a small set of

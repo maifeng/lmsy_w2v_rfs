@@ -15,6 +15,12 @@ Three levers, in order: set `n_cores` correctly, cap BLAS threads before any
 worker forks, shard very large corpora into 10k-doc files. SLURM and SGE
 templates tie it all together.
 
+> **Backend note for older clusters.** The `[stanza]`, `[corenlp]`, and `[all]`
+> extras pull in PyTorch (~2 GB), whose wheels require a recent glibc. On older
+> systems (e.g. CentOS 7, glibc < 2.17) the import can fail with a GLIBC
+> `OSError`. There, use `preprocessor="none"` (no dependencies) or `"spacy"`
+> with a compatible wheel. The CoreNLP backend additionally needs Java on `$PATH`.
+
 ### 1. Set `n_cores` to the allocation
 
 ```python
@@ -72,9 +78,13 @@ the failure mode is silent slowdown.
 ### 3. Shard large corpora
 
 The pipeline holds the full text list in memory and streams sentences to disk
-stage by stage. RAM grows linearly with corpus size. For corpora beyond
-~100k documents, shard the input by 10k and run one pipeline per shard.
-Aggregate at scoring time with `pandas.concat`.
+stage by stage. RAM grows linearly with corpus size. Two complementary controls:
+
+- `Config(parse_chunk_size=N)` preprocesses documents in batches of `N` within
+  a single run, capping how many parsed documents are held in flight at once —
+  the cheapest first step for a large shard.
+- For corpora beyond ~100k documents, shard the input by 10k and run one
+  pipeline per shard, aggregating at scoring time with `pandas.concat`.
 
 ```python
 import math

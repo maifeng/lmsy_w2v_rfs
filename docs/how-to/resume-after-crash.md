@@ -113,7 +113,7 @@ One sentence per file:
 |---|---|---|
 | `parse` | `texts`, `doc_ids` | `parsed/sentences.txt`, `parsed/sentence_ids.txt` |
 | `clean` | `parsed/sentences.txt` | `cleaned/sentences.txt` |
-| `phrase` | `cleaned/sentences.txt` | `corpora/pass{1,2}.txt`, `models/phrases_pass{1,2}.pkl` |
+| `phrase` | `cleaned/sentences.txt` | `corpora/pass{1,2}.txt`, `models/phrases_pass{1,2}.mod` |
 | `train` | `corpora/pass{N}.txt` (or `cleaned/sentences.txt`) | `models/w2v.mod` |
 | `expand_dictionary` | `models/w2v.mod` | `outputs/expanded_dict.csv` |
 | `score` | `corpora/pass{N}.txt` (or `cleaned/sentences.txt` when `use_gensim_phrases=False`), `parsed/sentence_ids.txt`, `expanded_dict.csv` | `outputs/scores_{METHOD}.csv` |
@@ -131,10 +131,12 @@ The dumped `config.json` in `work_dir/` is an audit trail, not a cache key.
 
 ## Gotcha: partial writes
 
-A crash during `parse` can leave `parsed/sentences.txt` truncated. The next
-run will see the partial file and try to reuse it, skipping the parse stage
-and producing silently-wrong downstream output. When in doubt after a hard
-crash, delete the suspect file and rerun.
+The `parse` and `clean` stages write to a temporary file and atomically rename
+it on success, so a crash leaves no truncated output — the stage simply re-runs
+cleanly on the next invocation. The `phrase` and `train` stages write their
+model files directly, so a crash mid-write *can* leave a corrupt `models/w2v.mod`
+or `models/phrases_pass*.mod`. If a run crashed during those stages, delete the
+suspect model file (or pass `force=True`) and rerun.
 
 ## Related
 

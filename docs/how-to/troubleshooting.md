@@ -4,23 +4,34 @@ Common errors encountered when running `lmsy_w2v_rfs` and the exact resolution f
 
 ---
 
-## `ImportError: cannot import name 'StanzaPreprocessor'`
+## `ImportError`: a preprocessor backend is not installed
 
-**Symptoms:**
+**Symptoms:** selecting `preprocessor="stanza"` (or `spacy`/`corenlp`) without its
+extra raises an actionable message such as:
 
 ```
-ImportError: cannot import name 'StanzaPreprocessor' from 'lmsy_w2v_rfs.preprocess'
+ImportError: The stanza preprocessor could not be loaded. It needs the '[stanza]'
+extra: pip install 'lmsy_w2v_rfs[stanza]'. If stanza is installed but still fails
+to import (e.g. an OSError about GLIBC on an older Linux/HPC node), the
+torch/stanza wheels are incompatible with that system — use preprocessor='spacy'
+or 'none'.
 ```
 
-**Cause:** The base install does not pull `stanza` or its transitive dependencies. Stanza-specific modules are gated behind the `[stanza]` extra so that a minimal install stays small.
+**Cause:** the base install does not pull `stanza`/`spacy` or their transitive
+dependencies (notably PyTorch). They are gated behind the optional extras so a
+minimal install stays small.
 
-**Fix:** Install the extra and rerun:
+**Fix:** install the extra and rerun:
 
 ```bash
 pip install "lmsy_w2v_rfs[stanza]"
 ```
 
-The same pattern applies to `CoreNLPPreprocessor` (`[corenlp]` extra) and `SpacyPreprocessor` (`[spacy]` extra plus `python -m spacy download en_core_web_sm`). Install all three with `pip install "lmsy_w2v_rfs[all]"`.
+The same pattern applies to `corenlp` (`[corenlp]` extra) and `spacy` (`[spacy]`
+extra plus `python -m spacy download en_core_web_sm`). Install all three with
+`pip install "lmsy_w2v_rfs[all]"`. On an old-glibc cluster (CentOS 7, glibc <
+2.17) the torch wheels may fail to load even when installed — use
+`preprocessor="none"` or `"spacy"` with a compatible wheel.
 
 ---
 

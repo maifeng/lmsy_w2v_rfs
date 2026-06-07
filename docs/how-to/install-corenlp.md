@@ -2,13 +2,14 @@
 
 ## Problem
 
-The default preprocessor is `"corenlp"` because it reproduces the 2021 paper's
-Phase 1 behavior exactly and gives the best syntactic MWE coverage on the
-benchmark (76%, versus 57% for stanza and 0% for spaCy). Getting it running
-takes three things working at once: a Java 8+ runtime on `$PATH`, the
-`[corenlp]` extra installed, and the ~1 GB CoreNLP archive expanded into the
-cache directory. If any of the three is missing, the first call to the parser
-fails with a cryptic JVM or import error.
+CoreNLP is the opt-in, paper-faithful preprocessor: it reproduces the 2021
+paper's Phase 1 behavior exactly and gives the best syntactic MWE coverage on
+the benchmark (76%, versus 57% for stanza and 0% for spaCy). It is not the
+default (that is `"none"`, which needs no setup). Getting CoreNLP running takes
+three things working at once: a Java 8+ runtime on `$PATH`, the `[corenlp]`
+extra installed, and the ~1 GB CoreNLP archive expanded into the cache
+directory. If Java is missing the backend now raises a clear message telling
+you to install a JRE or switch to `spacy`/`none`.
 
 ## Solution
 

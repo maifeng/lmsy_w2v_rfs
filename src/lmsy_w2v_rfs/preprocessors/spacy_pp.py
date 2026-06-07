@@ -3,9 +3,10 @@
 Parses, lemmatizes, masks named entities as ``[NER:TYPE]`` placeholders, and
 joins tokens linked by ``fixed`` / ``flat`` / ``compound`` dependencies.
 
-On the 150-doc benchmark this was 9x faster than stanza and 2x faster than
-the CoreNLP server, produced the cleanest NER output (18 types, zero
-punctuation contamination), and the smallest Word2Vec-ready vocabulary. It
+On the 1,393-doc benchmark this was the fastest parser backend (faster than
+both stanza and the CoreNLP server), produced the cleanest NER output (18
+types, zero punctuation contamination), and the smallest Word2Vec-ready
+vocabulary. It
 loses on syntactic MWE coverage (0% on the grammaticalized-fixed test set)
 because spaCy's English UD converter does not emit ``fixed`` or
 ``compound:prt``. Pair with a curated ``mwe_list`` or switch to

@@ -82,15 +82,17 @@ lmsy-w2v-rfs run \
 The command will:
 
 1. Read every row of the CSV.
-2. Parse each transcript with CoreNLP (8 JVM threads).
-3. Mask named entities, join multi-word expressions.
-4. Learn bigrams and trigrams with gensim `Phrases`.
-5. Train a 300-dim Word2Vec model on the corpus.
-6. Expand each seed list to 500 words via nearest-neighbor search.
-7. Score every document on each dimension under TF, TFIDF, and WFIDF.
+2. Tokenize each transcript with the default `none` backend (whitespace +
+   lowercase). Add `--preprocessor spacy` or `--preprocessor corenlp` for
+   lemmatization, named-entity masking, and parser-based multi-word expressions.
+3. Learn bigrams and trigrams with gensim `Phrases`.
+4. Train a 300-dim Word2Vec model (CBOW) on the corpus.
+5. Expand each seed list to 500 words via nearest-neighbor search.
+6. Score every document on each dimension under TF, TFIDF, and WFIDF.
 
-On a 1,393-document earnings-call corpus at `--n-cores 8`, total runtime
-is ~13 minutes on an Apple Silicon M-series laptop.
+With the default `none` backend the run takes a few minutes on a
+1,393-document corpus; the optional CoreNLP parse adds ~11.7 minutes at
+`--n-cores 8` on an Apple Silicon M-series laptop.
 
 ### 5. Look at the outputs
 
@@ -152,6 +154,7 @@ lmsy-w2v-rfs run --input transcripts.csv --input-format csv \
 lmsy-w2v-rfs run \
   --input dump.jsonl --input-format jsonl \
   --text-key body --id-key doc_id \
+  --seeds my_seeds.txt \
   --out runs/x
 ```
 
@@ -160,6 +163,7 @@ lmsy-w2v-rfs run \
 ```bash
 lmsy-w2v-rfs run \
   --input ./10k_filings/ --input-format directory --glob-pattern "*.txt" \
+  --seeds my_seeds.txt \
   --out runs/x
 ```
 
@@ -172,6 +176,7 @@ The format the 2021 paper ships with its sample corpus:
 ```bash
 lmsy-w2v-rfs run \
   --input documents.txt --ids document_ids.txt \
+  --seeds my_seeds.txt \
   --out runs/x
 ```
 
@@ -188,6 +193,7 @@ python -m spacy download en_core_web_sm
 lmsy-w2v-rfs run \
   --input transcripts.csv --input-format csv \
   --text-col transcript --id-col call_id \
+  --seeds my_seeds.txt \
   --preprocessor spacy --spacy-model en_core_web_sm \
   --out runs/x --n-cores 8
 ```
@@ -201,6 +207,7 @@ For a rough-and-ready run without installing any parser:
 ```bash
 lmsy-w2v-rfs run --input transcripts.csv --input-format csv \
   --text-col transcript --id-col call_id \
+  --seeds my_seeds.txt \
   --preprocessor none \
   --phrase-min-count 5 --phrase-threshold 5.0 \
   --out runs/x

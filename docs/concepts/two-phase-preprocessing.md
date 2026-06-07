@@ -1,6 +1,6 @@
 # Two-phase preprocessing
 
-`lmsy_w2v_rfs` constructs multi-word expressions (MWEs) in two phases before Word2Vec sees a single token. Each phase catches a different class of MWE, and dropping either one measurably degrades the trained vocabulary.
+`lmsy_w2v_rfs` can construct multi-word expressions (MWEs) in two phases before Word2Vec sees a single token. Each phase catches a different class of MWE. Phase 2 (statistical) always runs; Phase 1a (parser-based) runs only when you select a parser backend — the default `preprocessor="none"` skips it.
 
 ---
 
@@ -26,13 +26,13 @@ The configured parser tokenizes, lemmatizes, tags named entities, and joins toke
 
 | value | Needs | Strength |
 |---|---|---|
-| `"corenlp"` (default) | `[corenlp]` extra and Java 8+ | Paper-exact; 76% syntactic MWE recall; best JVM thread scaling |
-| `"spacy"` | `[spacy]` extra and a model | Fastest parser; best NER; 0% `fixed` or `compound:prt` recall |
-| `"stanza"` | `[stanza]` extra | Python-native; 57% syntactic MWE recall; slowest on CPU |
+| `"none"` (default) | nothing | Whitespace tokenize + lowercase; zero dependencies, runs out of the box |
 | `"static"` | `nltk` only | Deterministic curated-list pass; no parser |
-| `"none"` | nothing | Whitespace tokenize only |
+| `"spacy"` | `[spacy]` extra and a model | Fastest parser; best NER; 0% `fixed` or `compound:prt` recall |
+| `"corenlp"` | `[corenlp]` extra and Java 8+ | Paper-exact; 76% syntactic MWE recall; best JVM thread scaling |
+| `"stanza"` | `[stanza]` extra | Python-native; 57% syntactic MWE recall; slowest on CPU |
 
-Lemmatization is not optional for the 2021 seed-matching logic: the seed `integrity` needs to match surface forms `integrities` and `integrated`, which only a lemmatizer resolves. NER masking replaces proper nouns with `[NER:TYPE]` placeholders so firm names like `Apple` cannot be promoted into a culture dictionary. `preprocessor="none"` skips both and should only be used when the input is already lemmatized.
+The default, `"none"`, does no parsing — it just splits on whitespace and lowercases. It is the zero-friction starting point and is the right choice when your input is already tokenized, or when you simply want to try the package; Phase 2 and Word2Vec still produce useful dictionaries. The parser backends add value when you want their Phase 1a signals: lemmatization (so the seed `integrity` matches `integrities`/`integrated`) and NER masking (so firm names like `Apple` are replaced with `[NER:TYPE]` placeholders and cannot enter a dictionary). For paper-faithful Phase 1a, choose `"corenlp"`; for a fast Java-free parser, choose `"spacy"`.
 
 ## Phase 1b: optional static MWE list
 
@@ -56,4 +56,4 @@ The two phases are complementary because they rely on different signals:
 | `forward_looking_statement` | Phase 2 | High-frequency collocation, no UD label |
 | `fourth_quarter` | Phase 2 | Domain collocation, no UD label |
 
-Phase 1a is grammar-driven and catches syntactic patterns that appear once or twice in the corpus. Phase 2 is frequency-driven and catches idiomatic phrasings that occur often enough to dominate their constituent words' co-occurrence statistics. Both run by default. The full benchmark behind this design, including NER quality and throughput numbers, lives in [Preprocessor comparison](../explanation/mwe-comparison.md).
+Phase 1a is grammar-driven and catches syntactic patterns that appear once or twice in the corpus. Phase 2 is frequency-driven and catches idiomatic phrasings that occur often enough to dominate their constituent words' co-occurrence statistics. Phase 2 runs by default; Phase 1a is enabled by choosing a parser backend (`spacy`, `corenlp`, or `stanza`). The full benchmark behind this design, including NER quality and throughput numbers, lives in [Preprocessor comparison](../explanation/mwe-comparison.md).
