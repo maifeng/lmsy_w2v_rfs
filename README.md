@@ -66,6 +66,8 @@ lmsy-w2v-rfs download-corenlp
 
 ## Quickstart
 
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb) &nbsp; **Try it now** — no install, runs on a bundled 2,000-review demo corpus.
+
 Researchers usually start from a table of documents. Point the pipeline at a CSV,
 declare a few seed words per concept, and run:
 
