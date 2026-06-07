@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-06-07
+
+### Changed
+
+- **Default preprocessor is now `none`** (was `corenlp`). A bare `pip install lmsy_w2v_rfs`
+  plus `Config(seeds=...)` now runs end to end with no Java, no model download, and no
+  extra dependencies. `corenlp` remains the opt-in paper-faithful backend.
+- **Word2Vec now trains skip-gram by default** (`w2v_sg=1`), matching Li et al. (2021).
+  Previously the gensim default (CBOW) was used implicitly. `w2v_sg` is now a `Config` field.
+- README restructured for an academic audience: full citation + BibTeX moved to the top,
+  marketing-style tagline replaced with a methodological description, quickstart leads with
+  `Pipeline.from_csv`, and a dedicated "Reproducing Li et al. (2021)" section added.
+- Link to the authors' original implementation added (README, `pyproject.toml`).
+
+### Added
+
+- CoreNLP backend now pins `tokenize.options=splitHyphenated=false,splitForwardSlash=false`
+  (with `ner.applyFineGrained=false`) so a modern CoreNLP 4.x server reproduces the 3.9.2
+  tokenization the paper used.
+- `Config` validates numeric hyperparameters at construction (`w2v_dim`, `n_words_dim`,
+  `phrase_passes`, `w2v_sg`, `dict_restrict_vocab`).
+- CLI `--methods` now restricted to valid scoring methods via `choices`.
+- Direct unit tests for `expand_words_dimension_mean` and the WFIDF scoring formula.
+
+### Fixed
+
+- `expand_words_dimension_mean` now calls `wv.sort_by_descending_frequency()` before using
+  `restrict_vocab`, so the frequency cutoff selects the most frequent words rather than an
+  arbitrary slice of the vocabulary.
+- Selecting `spacy`/`stanza`/`corenlp` without the backend installed (or on an old-glibc
+  system where the wheels cannot load) now raises an actionable message instead of a bare
+  `ModuleNotFoundError`/`OSError`.
+- Firm-year aggregation guards against zero-length documents (no more `inf`/`NaN` from a
+  division by zero).
+- `score_document` uses `df_dict.get(w, 1)` to avoid a `KeyError` on a dictionary word
+  absent from the document-frequency table.
+- `parse` and `clean` write to a temp file and atomically rename on success, so a crash
+  mid-corpus no longer leaves a truncated file that the resume check mistakes for complete.
+- `gensim` lower bound raised to `>=4.3.3` (numpy 2.x C-ABI compatibility); `protobuf`
+  upper-bounded to `<6` in the optional backends.
+- Broken copy-paste examples fixed in `docs/how-to/load-documents.md` (missing `config=`)
+  and `docs/reference/cli.md` (missing `--seeds`).
+- `CITATION.cff` version corrected (was two releases behind).
+
 ## [0.1.4] - 2026-04-28
 
 ### Added

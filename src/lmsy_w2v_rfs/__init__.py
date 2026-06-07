@@ -27,15 +27,14 @@ Minimal example::
     from lmsy_w2v_rfs import Pipeline, Config
 
     seeds = {
-        "risk":   ["risk", "uncertainty", "volatility"],
-        "growth": ["growth", "expansion", "scale"],
+        "innovation":   ["innovation", "innovative", "creativity"],
+        "teamwork":     ["teamwork", "collaboration", "supportive"],
+        "compensation": ["pay", "salary", "benefits"],  # beyond culture
     }
-    p = Pipeline(
-        texts=["growth was strong this quarter ...",
-               "rising volatility weighed on margins ..."],
-        doc_ids=["doc1", "doc2"],
+    p = Pipeline.from_csv(
+        "reviews.csv", text_col="text", id_col="id",
         work_dir="runs/demo",
-        config=Config(seeds=seeds, preprocessor="none"),
+        config=Config(seeds=seeds),   # preprocessor="none" by default
     )
     p.run()
     p.show_dictionary(top_k=10)
@@ -77,7 +76,7 @@ from .scoring import (
 )
 from .w2v import load_word2vec, train_word2vec
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 __paper__ = (
     "Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan. 2021. "

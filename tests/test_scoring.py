@@ -36,6 +36,46 @@ def test_score_document_tfidf_matches_formula() -> None:
     assert abs(scores[0] - expected) < 1e-9
 
 
+def test_score_document_wfidf_matches_formula() -> None:
+    doc = "integrity integrity ethics"
+    expanded = {"integrity": {"integrity", "ethics"}}
+    df = {"integrity": 1, "ethics": 2}
+    n = 10
+    scores, length = score_document(
+        doc, expanded, method="WFIDF", df_dict=df, n_docs=n
+    )
+    assert length == 3
+    # WFIDF weight per hit = (1 + log(tf)) * log(N/df)
+    expected = (1 + math.log(2)) * math.log(n / 1) + (1 + math.log(1)) * math.log(n / 2)
+    assert abs(scores[0] - expected) < 1e-9
+
+
+def test_score_document_tfidf_missing_df_falls_back() -> None:
+    # A dictionary word absent from df_dict must not raise; df defaults to 1.
+    doc = "integrity newword"
+    expanded = {"integrity": {"integrity", "newword"}}
+    df = {"integrity": 2}  # 'newword' deliberately absent
+    scores, _ = score_document(doc, expanded, method="TFIDF", df_dict=df, n_docs=10)
+    expected = 1 * math.log(10 / 2) + 1 * math.log(10 / 1)
+    assert abs(scores[0] - expected) < 1e-9
+
+
+def test_aggregate_zero_length_document_is_zero_not_nan() -> None:
+    scores = pd.DataFrame(
+        {
+            "Doc_ID": ["d1", "d2"],
+            "integrity": [2.0, 0.0],
+            "document_length": [100, 0],  # d2 is an empty document
+        }
+    )
+    id2firm = pd.DataFrame(
+        {"document_id": ["d1", "d2"], "firm_id": ["F1", "F2"], "time": [2020, 2020]}
+    )
+    out = aggregate_to_firm_year(scores, id2firm, dims=["integrity"])
+    assert out["integrity"].notna().all()
+    assert out.loc[out.firm_id == "F2", "integrity"].iloc[0] == 0.0
+
+
 def test_score_documents_returns_dataframe() -> None:
     docs = [("a", "integrity ethics"), ("b", "innovation passion")]
     expanded = {

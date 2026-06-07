@@ -100,13 +100,14 @@ class Config:
         seeds: Mapping of dimension name to seed word list. Required.
         stopwords: Lowercased stopwords removed during cleaning.
         preprocessor: Backend to use for Phase 1. One of
-            ``corenlp`` (default; CoreNLP server via stanza.server; needs Java
-            and the ``[corenlp]`` extra; paper-exact),
-            ``spacy`` (faster on modern hardware; needs ``pip install spacy``),
-            ``stanza`` (stanza.Pipeline; Python-native),
-            ``static`` (NLTK MWETokenizer with the packaged list; Java-free),
-            ``none`` (whitespace split only; Java-free, for already-tokenized
-            input).
+            ``none`` (default; whitespace split + lowercase only; no extra
+            dependencies, so a bare ``pip install`` runs out of the box),
+            ``spacy`` (recommended for richer parsing: lemmatization, NER
+            masking, dependency MWEs; needs the ``[spacy]`` extra + a model),
+            ``corenlp`` (paper-exact reproduction; CoreNLP server via
+            stanza.server; needs Java and the ``[corenlp]`` extra),
+            ``stanza`` (stanza.Pipeline; Python-native, slowest),
+            ``static`` (NLTK MWETokenizer with a curated list; Java-free).
         mwe_list: Curated MWE list applied AFTER the main preprocessor as
             a second pass. ``"finance"`` for the packaged list, a path for
             your own, or ``None`` (default) to skip.
@@ -123,6 +124,8 @@ class Config:
         w2v_window: Word2Vec context window.
         w2v_min_count: Word2Vec minimum token count.
         w2v_epochs: Word2Vec training epochs.
+        w2v_sg: Word2Vec training algorithm: ``1`` for skip-gram (the
+            default, as in Li et al. 2021), ``0`` for CBOW.
         n_words_dim: Top-k expanded words per dimension.
         dict_restrict_vocab: Restrict expansion to the top fraction of vocab.
         min_similarity: Discard expansion candidates below this cosine.
@@ -136,7 +139,7 @@ class Config:
     stopwords: set[str] = field(default_factory=lambda: set(STOPWORDS_SRAF))
 
     # Phase 1: preprocessing.
-    preprocessor: PreprocessorName = "corenlp"
+    preprocessor: PreprocessorName = "none"
     mwe_list: str | Path | None = None
     spacy_model: str = "en_core_web_sm"
 
@@ -157,6 +160,7 @@ class Config:
     w2v_window: int = 5
     w2v_min_count: int = 5
     w2v_epochs: int = 20
+    w2v_sg: int = 1  # 1 = skip-gram (Li et al. 2021); 0 = CBOW
 
     # Dictionary expansion
     n_words_dim: int = 500
@@ -175,7 +179,8 @@ class Config:
             raise ValueError(
                 "Config.seeds is required and must be non-empty. "
                 "Pass a mapping of dimension name to seed word list, e.g. "
-                'Config(seeds={"risk": ["risk", "uncertainty"], "growth": [...]}). '
+                'Config(seeds={"innovation": ["innovation", "creative"], '
+                '"teamwork": ["teamwork", "collaboration"]}). '
                 "To reproduce the 2021 paper, use "
                 'load_example_seeds("culture_2021").'
             )
@@ -186,6 +191,24 @@ class Config:
                 raise ValueError(
                     f"Seeds for dimension {dim!r} must be a non-empty list of strings."
                 )
+        # Numeric guards: catch bad hyperparameters at construction time rather
+        # than deep inside gensim or with a silently-empty result.
+        if self.w2v_dim <= 0:
+            raise ValueError(f"w2v_dim must be positive. Got: {self.w2v_dim}")
+        if self.n_words_dim <= 0:
+            raise ValueError(f"n_words_dim must be positive. Got: {self.n_words_dim}")
+        if self.use_gensim_phrases and self.phrase_passes < 1:
+            raise ValueError(
+                f"phrase_passes must be >= 1 when use_gensim_phrases is True. "
+                f"Got: {self.phrase_passes}. Set use_gensim_phrases=False to skip phrases."
+            )
+        if self.w2v_sg not in (0, 1):
+            raise ValueError(f"w2v_sg must be 0 (CBOW) or 1 (skip-gram). Got: {self.w2v_sg}")
+        if self.dict_restrict_vocab is not None and not (0.0 < self.dict_restrict_vocab <= 1.0):
+            raise ValueError(
+                "dict_restrict_vocab must be a fraction in (0, 1] (e.g. 0.2 = top "
+                f"20% of vocab by frequency) or None. Got: {self.dict_restrict_vocab}"
+            )
 
     def with_(self, **kwargs: Any) -> Config:
         """Return a copy with the given fields overridden.

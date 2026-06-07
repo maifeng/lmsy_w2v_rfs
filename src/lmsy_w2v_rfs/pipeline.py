@@ -192,9 +192,14 @@ class Pipeline:
         texts_nonempty = [t for t, _ in pairs]
         ids_nonempty = [d for _, d in pairs]
 
+        # Write to temp files and atomically promote on success, so a crash
+        # mid-corpus never leaves a truncated file that the resume check (which
+        # tests only for existence) would mistake for a completed stage.
+        sents_tmp = self.parsed_sents_path.with_name(self.parsed_sents_path.name + ".tmp")
+        ids_tmp = self.parsed_ids_path.with_name(self.parsed_ids_path.name + ".tmp")
         try:
-            with self.parsed_sents_path.open("w", encoding="utf-8", newline="\n") as f_txt, \
-                 self.parsed_ids_path.open("w", encoding="utf-8", newline="\n") as f_ids:
+            with sents_tmp.open("w", encoding="utf-8", newline="\n") as f_txt, \
+                 ids_tmp.open("w", encoding="utf-8", newline="\n") as f_ids:
                 i = 0
                 # process_documents() is optional on the Protocol; fall back
                 # to a serial loop over process() for simple backends.
@@ -214,10 +219,14 @@ class Pipeline:
                     i += 1
                     if i % 100 == 0:
                         log.info("parse: %d docs", i)
+            sents_tmp.replace(self.parsed_sents_path)
+            ids_tmp.replace(self.parsed_ids_path)
         finally:
             close = getattr(preprocessor, "close", None)
             if callable(close):
                 close()
+            sents_tmp.unlink(missing_ok=True)
+            ids_tmp.unlink(missing_ok=True)
 
     # ---------- stage 2: clean ---------------------------------------
 
@@ -235,11 +244,16 @@ class Pipeline:
         # tokens. The clean pass drops stopwords, punctuation, and 1-letter
         # tokens, preserving ``[NER:*]`` placeholders and underscore joins.
         clean_fn = clean_plain_line
-        with self.parsed_sents_path.open("r", encoding="utf-8") as f_in, \
-             self.cleaned_path.open("w", encoding="utf-8", newline="\n") as f_out:
-            for line in tqdm.tqdm(f_in, desc="clean"):
-                out = clean_fn(line, self.config.stopwords)
-                f_out.write(out + "\n")
+        cleaned_tmp = self.cleaned_path.with_name(self.cleaned_path.name + ".tmp")
+        try:
+            with self.parsed_sents_path.open("r", encoding="utf-8") as f_in, \
+                 cleaned_tmp.open("w", encoding="utf-8", newline="\n") as f_out:
+                for line in tqdm.tqdm(f_in, desc="clean"):
+                    out = clean_fn(line, self.config.stopwords)
+                    f_out.write(out + "\n")
+            cleaned_tmp.replace(self.cleaned_path)
+        finally:
+            cleaned_tmp.unlink(missing_ok=True)
 
     # ---------- stage 3: phrases -------------------------------------
 

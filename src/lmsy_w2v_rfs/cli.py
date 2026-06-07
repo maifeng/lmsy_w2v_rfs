@@ -23,6 +23,7 @@ from .pipeline import Pipeline
 
 _PREPROCESSOR_CHOICES = ("none", "static", "stanza", "corenlp", "spacy")
 _INPUT_FORMAT_CHOICES = ("text", "csv", "jsonl", "directory")
+_METHOD_CHOICES = ("TF", "TFIDF", "WFIDF", "TFIDF+SIMWEIGHT", "WFIDF+SIMWEIGHT")
 
 
 def _add_run_args(p: argparse.ArgumentParser) -> None:
@@ -69,12 +70,12 @@ def _add_run_args(p: argparse.ArgumentParser) -> None:
 
     # ----- Phase 1 -------------------------------------------------------
     g_p1 = p.add_argument_group("phase 1 (preprocessor)")
-    g_p1.add_argument("--preprocessor", choices=_PREPROCESSOR_CHOICES, default="corenlp",
-                      help="Phase 1a backend. Default 'corenlp' (paper-faithful, "
-                           "needs Java + lmsy-w2v-rfs download-corenlp, best "
-                           "syntactic MWE coverage). Alternatives: 'spacy' "
-                           "(fastest, no Java), 'stanza' (Python-native, slow), "
-                           "'static' (curated-list only), 'none' (no parser).")
+    g_p1.add_argument("--preprocessor", choices=_PREPROCESSOR_CHOICES, default="none",
+                      help="Phase 1a backend. Default 'none' (no parser, no extra "
+                           "dependencies). Alternatives: 'spacy' (lemmas + NER, no "
+                           "Java), 'corenlp' (paper-faithful, needs Java + "
+                           "lmsy-w2v-rfs download-corenlp), 'stanza' (Python-native, "
+                           "slow), 'static' (curated MWE list only).")
     g_p1.add_argument("--mwe-list", default="none",
                       help="Optional static MWE list applied after the main "
                            "preprocessor. 'none' (default) skips it. 'finance' uses "
@@ -113,10 +114,10 @@ def _add_run_args(p: argparse.ArgumentParser) -> None:
     g_score = p.add_argument_group("dictionary and scoring")
     g_score.add_argument("--n-words-dim", type=int, default=500,
                          help="Top-k expanded words per dimension.")
-    g_score.add_argument("--methods", nargs="+", default=["TF", "TFIDF", "WFIDF"],
+    g_score.add_argument("--methods", nargs="+", choices=_METHOD_CHOICES,
+                         default=["TF", "TFIDF", "WFIDF"], metavar="METHOD",
                          help="Space-separated list of scoring methods. "
-                              "Any subset of TF, TFIDF, WFIDF, TFIDF+SIMWEIGHT, "
-                              "WFIDF+SIMWEIGHT.")
+                              "Any subset of: " + ", ".join(_METHOD_CHOICES) + ".")
     g_score.add_argument("--zca-whiten", action="store_true",
                          help="Apply ZCA whitening to the dimension columns of "
                               "every scores DataFrame. Decorrelates while keeping "
@@ -187,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lmsy-w2v-rfs",
         description=(
-            "Word2Vec corporate-culture measurement. "
+            "Word2Vec seed-expansion document scoring. "
             "Run the full pipeline (run) or install CoreNLP (download-corenlp)."
         ),
     )

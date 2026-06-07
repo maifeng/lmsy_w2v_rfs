@@ -17,6 +17,18 @@ All factories produce the same internal representation: `texts` is a
 sentences, newlines, headers, etc.), and `doc_ids` is a matching
 `list[str]` of identifiers for later joins.
 
+Every `Pipeline` needs a `config` — the seed dictionary is required and has
+no default. The examples below reuse this one:
+
+```python
+from lmsy_w2v_rfs import Config
+
+config = Config(seeds={
+    "innovation":   ["innovation", "innovative", "creativity"],
+    "teamwork":     ["teamwork", "collaboration", "supportive"],
+})  # preprocessor="none" by default
+```
+
 ---
 
 ### A. You already have a list of strings
@@ -34,7 +46,7 @@ texts = [
 ]
 doc_ids = ["AAPL_2024Q1", "WFC_2024Q1", "TSLA_2024Q1"]
 
-p = Pipeline(texts=texts, doc_ids=doc_ids, work_dir="runs/demo")
+p = Pipeline(texts=texts, doc_ids=doc_ids, work_dir="runs/demo", config=config)
 p.run()
 ```
 
@@ -58,6 +70,7 @@ p = Pipeline.from_csv(
     text_col="transcript",
     id_col="call_id",
     work_dir="runs/demo",
+    config=config,
 )
 p.run()
 ```
@@ -70,6 +83,7 @@ p = Pipeline.from_csv(
     "transcripts.tsv",
     text_col="body", id_col="doc_id",
     work_dir="runs/demo",
+    config=config,
     sep="\t", encoding="latin-1",
 )
 ```
@@ -90,7 +104,7 @@ df = df[df["year"] >= 2020]          # filter however you like
 df = df[df["transcript"].str.len() > 1000]
 
 p = Pipeline.from_dataframe(
-    df, text_col="transcript", id_col="call_id", work_dir="runs/demo",
+    df, text_col="transcript", id_col="call_id", work_dir="runs/demo", config=config,
 )
 p.run()
 ```
@@ -99,7 +113,7 @@ If you have no explicit ID column, set `id_col=None` and the DataFrame's
 row index is used:
 
 ```python
-p = Pipeline.from_dataframe(df, text_col="transcript", id_col=None, work_dir="runs/x")
+p = Pipeline.from_dataframe(df, text_col="transcript", id_col=None, work_dir="runs/x", config=config)
 ```
 
 ---
@@ -122,6 +136,7 @@ p = Pipeline.from_directory(
     "./10k_filings/",
     pattern="*.txt",
     work_dir="runs/sec_10k",
+    config=config,
 )
 p.run()
 ```
@@ -142,6 +157,7 @@ p = Pipeline.from_text_file(
     "data/input/documents.txt",
     id_path="data/input/document_ids.txt",
     work_dir="runs/rfs2021",
+    config=config,
 )
 p.run()
 ```
@@ -168,6 +184,7 @@ p = Pipeline.from_jsonl(
     text_key="transcript",
     id_key="call_id",
     work_dir="runs/demo",
+    config=config,
 )
 p.run()
 ```

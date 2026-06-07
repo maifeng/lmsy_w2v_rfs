@@ -20,6 +20,12 @@ import pathlib
 from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING
 
+# Imported at module top so a missing [corenlp] extra (or an old-glibc box
+# where the stanza wheel cannot load) raises at import time in
+# build_preprocessor, where it becomes a helpful message. Java is a separate
+# requirement checked when the server starts.
+import stanza
+
 from ..config import default_cache_dir
 
 if TYPE_CHECKING:
@@ -51,7 +57,15 @@ class CoreNLPPreprocessor:
             ImportError: If the corenlp extra is not installed.
             RuntimeError: If Java is not on PATH.
         """
-        import stanza
+        import shutil
+
+        if shutil.which("java") is None:
+            raise RuntimeError(
+                "The corenlp preprocessor needs Java 8+ on PATH, but no 'java' "
+                "executable was found. Install a JRE/JDK (e.g. 'apt install "
+                "default-jre' or 'brew install openjdk'), or use "
+                "preprocessor='spacy' or 'none' instead."
+            )
 
         home = default_cache_dir() / "corenlp"
         home.mkdir(parents=True, exist_ok=True)
@@ -73,7 +87,15 @@ class CoreNLPPreprocessor:
             threads=config.n_cores,
             timeout=config.corenlp_timeout_ms,
             be_quiet=True,
-            properties={"ner.applyFineGrained": "false"},
+            # Pin tokenization + NER to the CoreNLP 3.9.2 behavior the 2021
+            # paper used. Modern CoreNLP (4.x) defaults split hyphenated and
+            # slash-joined tokens (e-commerce -> e/-/commerce) and emit
+            # fine-grained NER tags, all of which change the vocabulary and
+            # therefore the scores. Keeping these false reproduces the paper.
+            properties={
+                "ner.applyFineGrained": "false",
+                "tokenize.options": "splitHyphenated=false,splitForwardSlash=false",
+            },
         )
         self._client.start()
         log.info("CoreNLPPreprocessor ready")

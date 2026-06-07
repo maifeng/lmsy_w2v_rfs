@@ -43,6 +43,12 @@ def expand_words_dimension_mean(
     Returns:
         Mapping of dimension name to expanded word set.
     """
+    # restrict_vocab in gensim keeps the FIRST restrict_k entries of the
+    # current index order, so the index must be frequency-sorted for that to
+    # mean "the most frequent restrict_k words." Sorting is idempotent and
+    # cheap; without it, restrict_vocab silently searches an arbitrary slice.
+    model.wv.sort_by_descending_frequency()
+
     vocab = model.wv.key_to_index
     all_seeds = {w for ws in seeds.values() for w in ws}
 

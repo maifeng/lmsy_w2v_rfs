@@ -1,17 +1,42 @@
-# `lmsy_w2v_rfs` — Word2Vec dictionary expansion and scoring for any seed-based vocabulary
+# `lmsy_w2v_rfs` — Word2Vec dictionary expansion and document scoring
 
 [![Open in Colab](https://img.shields.io/badge/Colab-quickstart-orange?logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb)
 [![PyPI version](https://img.shields.io/pypi/v/lmsy_w2v_rfs.svg)](https://pypi.org/project/lmsy_w2v_rfs/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Builds a **corpus-specific measurement dictionary with Word2Vec**. For each concept you want to measure in your corpus:
+`lmsy_w2v_rfs` implements the Word2Vec seed-expansion method for document scoring
+introduced in Li, Mai, Shen, and Yan (2021). A researcher specifies a small set of
+seed words for each concept to be measured; the package trains Word2Vec on the
+target corpus, expands each concept's seeds into a corpus-specific dictionary of
+related words and multi-word phrases, and produces document-level scores by
+TF-IDF–weighted dictionary matching. The method is theory-agnostic: any concept
+expressible as a list of seed words can be measured, in any corpus.
 
-- **You provide** a short seed-word list per concept.
-- **The package builds** a ranked dictionary of the words and multi-word phrases your corpus uses to express that concept.
-- **You curate** the dictionary: inspect, drop noise, add domain words.
-- **The package scores** every document by weighted hits against the curated dictionary.
+## Citation
 
-Cite as: Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), *RFS* 34(7):3265-3315. Full citation at the bottom.
+If you use this package in your research, please cite the paper the method is based on:
+
+> Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), "Measuring Corporate Culture
+> Using Machine Learning," *Review of Financial Studies* 34(7):3265–3315,
+> [doi.org/10.1093/rfs/hhaa079](https://doi.org/10.1093/rfs/hhaa079).
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{li2021measuring,
+  title={Measuring Corporate Culture Using Machine Learning},
+  author={Li, Kai and Mai, Feng and Shen, Rui and Yan, Xinyan},
+  journal={The Review of Financial Studies},
+  volume={34}, number={7}, pages={3265--3315}, year={2021},
+  doi={10.1093/rfs/hhaa079}
+}
+```
+</details>
+
+This package is an independent, generalized reimplementation. The authors' original
+code for the paper is at
+[MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning](https://github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning).
 
 ---
 
@@ -21,75 +46,79 @@ Cite as: Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), *RFS* 34(7):3265-33
 pip install -U lmsy_w2v_rfs
 ```
 
-The default preprocessor (`corenlp`) needs Java and a one-time CoreNLP archive download:
-
-```bash
-pip install -U "lmsy_w2v_rfs[corenlp]"
-lmsy-w2v-rfs download-corenlp                 # one-time, ~1 GB
-```
-
-Java-free alternatives:
+The base install runs out of the box with `preprocessor="none"` (whitespace
+tokenization). For richer Phase 1 parsing — lemmatization, named-entity masking,
+and dependency-based multi-word expressions — install an optional backend:
 
 ```bash
 pip install -U "lmsy_w2v_rfs[spacy]" && python -m spacy download en_core_web_sm
-pip install -U "lmsy_w2v_rfs[stanza]"
-pip install -U lmsy_w2v_rfs                   # bare; use preprocessor="static" or "none"
+```
+
+For exact reproduction of the 2021 paper, use the CoreNLP backend (needs Java and a
+one-time ~1 GB download):
+
+```bash
+pip install -U "lmsy_w2v_rfs[corenlp]"
+lmsy-w2v-rfs download-corenlp
 ```
 
 ---
 
 ## Quickstart
 
-Two concepts, a few seed words each, four lines of pipeline:
+Researchers usually start from a table of documents. Point the pipeline at a CSV,
+declare a few seed words per concept, and run:
 
 ```python
 from lmsy_w2v_rfs import Pipeline, Config
 
 seeds = {
-    "risk":   ["risk", "uncertainty", "volatility", "downside"],
-    "growth": ["growth", "expansion", "scale", "opportunity"],
+    "innovation":   ["innovation", "innovative", "creativity", "creative"],
+    "teamwork":     ["teamwork", "collaboration", "collaborate", "supportive"],
+    "compensation": ["pay", "salary", "compensation", "benefits", "bonus"],
 }
-texts = [
-    "Macro uncertainty and rising rates weighed on margins this quarter.",
-    "Strong customer demand drove double-digit revenue expansion across segments.",
-    "We hedged commodity exposure to limit downside from price volatility.",
-    "Investments in new markets are scaling our growth opportunity.",
-    # ... thousands more rows in practice
-]
 
-p = Pipeline(
-    texts=texts, doc_ids=[f"d{i}" for i in range(len(texts))],
+p = Pipeline.from_csv(
+    "reviews.csv", text_col="text", id_col="review_id",
     work_dir="runs/quickstart",
-    config=Config(seeds=seeds, preprocessor="none"),
+    config=Config(seeds=seeds),     # preprocessor="none" by default
 )
 p.run()                     # phrase + train + expand + score
 p.show_dictionary(top_k=10) # inspect the expanded dictionary
 print(p.score_df("TFIDF"))  # per-document scores
 ```
 
+The first two concepts come from the paper's culture construct; `compensation` is a
+concept *outside* the five culture dimensions, included to show the method
+generalizes. On a corpus of employee reviews, the expansion fills each concept with
+the corpus's own vocabulary — note that the seeds never mentioned `401k_match`,
+`dental`, or `mentorship`:
+
 ```text
-=== risk (12 words) ===
-  seeds:    risk, uncertainty, volatility, downside
-  expanded: risk, uncertainty, volatility, downside, exposure,
-            commodity_exposure, rising_rates, hedge, macro_uncertainty
-=== growth (14 words) ===
-  seeds:    growth, expansion, scale, opportunity
-  expanded: growth, expansion, scale, opportunity, customer_demand,
-            new_markets, revenue_expansion, double_digit, scaling
+=== innovation ===
+  seeds:    innovation, innovative, creativity, creative
+  expanded: creativity, entrepreneurial, passion, open_communication, fostering
+=== teamwork ===
+  seeds:    teamwork, collaboration, collaborate, supportive
+  expanded: collaboration, inclusion, mutual_respect, caring, fosters
+=== compensation ===
+  seeds:    pay, salary, compensation, benefits, bonus
+  expanded: salary, competitive, 401k_match, dental, medical, bonuses
 ```
 
-| Doc_ID | risk | growth | document_length |
-|---|---|---|---|
-| d0 | 0.41 | 0.00 | 13 |
-| d1 | 0.00 | 0.55 | 12 |
-| d2 | 0.62 | 0.00 | 12 |
-| d3 | 0.00 | 0.49 | 11 |
+The same `Pipeline` is available from in-memory lists, DataFrames, JSONL, and
+directories — see [Loading documents and seeds](#loading-documents-and-seeds).
 
-To reproduce the 2021 paper exactly:
+## Reproducing Li et al. (2021)
+
+The package ships the paper's 47 seed words across five culture dimensions, and the
+CoreNLP backend reproduces the paper's Phase 1 parsing:
 
 ```python
-from lmsy_w2v_rfs import load_example_seeds
+from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
+
 seeds = load_example_seeds("culture_2021")    # 47 seeds, 5 dimensions
+config = Config(seeds=seeds, preprocessor="corenlp")  # needs Java; see Install
 ```
 
 ---
@@ -106,11 +135,11 @@ Phrases carry meaning that single words cannot. The package extracts them in two
 
 | `Config(preprocessor=...)` | Backend | Needs |
 |---|---|---|
-| `"corenlp"` *(default, paper-faithful)* | Stanford CoreNLP via `stanza.server` | `[corenlp]` extra + Java |
-| `"spacy"` | spaCy | `[spacy]` extra + a model |
-| `"stanza"` | stanza `Pipeline` | `[stanza]` extra |
+| `"none"` *(default)* | whitespace tokenize, lowercase only | base install |
 | `"static"` | NLTK `MWETokenizer` over a curated list | base install |
-| `"none"` | whitespace tokenize, lowercase only | base install |
+| `"spacy"` | spaCy (lemmas, NER, dependency MWEs) | `[spacy]` extra + a model |
+| `"corenlp"` *(paper-faithful)* | Stanford CoreNLP via `stanza.server` | `[corenlp]` extra + Java |
+| `"stanza"` | stanza `Pipeline` | `[stanza]` extra |
 
 **Step 1b, statistical (corpus-specific phrases).** After Step 1a, gensim's `Phrases` scans the parsed corpus for statistically significant adjacent-token co-occurrences and joins them with `_`. A second pass over the bigram-joined corpus learns trigrams. This step identifies recurring collocations specific to the corpus: an earnings-call corpus surfaces `forward_looking_statement` and `cost_of_capital`; a product-review corpus surfaces `customer_service` and `delivery_time`; a Glassdoor corpus surfaces `work_life_balance` and `growth_opportunity`.
 
@@ -165,8 +194,8 @@ Nearest-neighbor expansion surfaces noise: off-topic terms, industry-specific ou
 ```python
 # Programmatic, replicable in a notebook:
 p.edit_dictionary(
-    remove={"risk": ["fantastic", "build"]},
-    add={"risk": ["liability"]},
+    remove={"innovation": ["fantastic", "incredible"]},
+    add={"innovation": ["patent"]},
 )
 
 # Spreadsheet-driven, faster on a big dictionary:
@@ -231,14 +260,14 @@ For corpora beyond a few hundred thousand documents, or when running on a cluste
 
 ---
 
-## All knobs
+## Configuration parameters
 
 ```python
 Config(
     seeds=...,                         # required: dict[str, list[str]]
 
     # Step 1a
-    preprocessor="corenlp",            # "corenlp" | "spacy" | "stanza" | "static" | "none"
+    preprocessor="none",               # "none" | "static" | "spacy" | "corenlp" | "stanza"
     mwe_list=None,                     # None | "finance" | path to a curated list
     spacy_model="en_core_web_sm",
     n_cores=4,
@@ -257,6 +286,7 @@ Config(
     w2v_window=5,
     w2v_min_count=5,
     w2v_epochs=20,
+    w2v_sg=1,                          # 1 = skip-gram (Li et al. 2021); 0 = CBOW
 
     # Step 3
     n_words_dim=500,                   # paper's threshold for the dictionary cutoff
@@ -278,26 +308,13 @@ Config(
 
 Full docs (concepts, how-to guides, API reference): https://maifeng.github.io/lmsy_w2v_rfs/
 
-## Citation
-
-If you use this package in your research, please cite the paper this implementation is based on:
-
-Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), "Measuring Corporate Culture Using Machine Learning," *Review of Financial Studies* 34(7):3265-3315, [doi.org/10.1093/rfs/hhaa079](https://doi.org/10.1093/rfs/hhaa079).
-
-```bibtex
-@article{li2021measuring,
-  title={Measuring Corporate Culture Using Machine Learning},
-  author={Li, Kai and Mai, Feng and Shen, Rui and Yan, Xinyan},
-  journal={The Review of Financial Studies},
-  volume={34}, number={7}, pages={3265--3315}, year={2021},
-  doi={10.1093/rfs/hhaa079}
-}
-```
+The citation and BibTeX are [at the top of this README](#citation).
 
 ## Links
 
 - GitHub: [github.com/maifeng/lmsy_w2v_rfs](https://github.com/maifeng/lmsy_w2v_rfs)
 - PyPI: [pypi.org/project/lmsy_w2v_rfs](https://pypi.org/project/lmsy_w2v_rfs/)
+- Original implementation: [github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning](https://github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning)
 
 ## License
 

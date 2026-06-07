@@ -43,6 +43,7 @@ def train_word2vec(
         min_count=config.w2v_min_count,
         workers=config.n_cores,
         epochs=config.w2v_epochs,
+        sg=config.w2v_sg,
         seed=config.random_state,
     )
     model.save(str(model_path))

@@ -16,6 +16,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+# Imported at module top (not lazily inside __init__) so that selecting this
+# backend without the [stanza] extra — or on an old-glibc Linux box where the
+# torch/stanza wheels cannot load — raises at the `from .stanza_pp import ...`
+# in build_preprocessor, where it is caught and turned into a helpful message.
+import stanza
+
 if TYPE_CHECKING:
     from ..config import Config
 
@@ -42,8 +48,6 @@ class StanzaPreprocessor:
         Raises:
             ImportError: If stanza is not installed.
         """
-        import stanza
-
         # Download the English model on first use; stanza caches to
         # ~/.stanza_resources by default.
         stanza.download("en", verbose=False, processors="tokenize,pos,lemma,depparse,ner")

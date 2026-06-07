@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lmsy_w2v_rfs"
-version = "0.1.4"
+version = "0.1.5"
 description = "Word-embedding seed expansion and document scoring. Bring your own seeds. Originally Li, Mai, Shen, Yan (2021, RFS)."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -33,7 +33,7 @@ classifiers = [
     "Topic :: Text Processing :: Linguistic",
 ]
 dependencies = [
-    "gensim>=4.3,<5",
+    "gensim>=4.3.3,<5",
     "numpy>=1.24,<3",
     "pandas>=2,<3",
     "scikit-learn>=1.3,<2",
@@ -48,16 +48,16 @@ spacy = [
 ]
 stanza = [
     "stanza>=1.8,<2",
-    "protobuf>=4",
+    "protobuf>=4,<6",
 ]
 corenlp = [
     "stanza>=1.8,<2",
-    "protobuf>=4",
+    "protobuf>=4,<6",
 ]
 all = [
     "spacy>=3.7,<4",
     "stanza>=1.8,<2",
-    "protobuf>=4",
+    "protobuf>=4,<6",
 ]
 dev = [
     "pytest>=8",
@@ -72,6 +72,7 @@ lmsy-w2v-rfs = "lmsy_w2v_rfs.cli:main"
 
 [project.urls]
 Paper = "https://doi.org/10.1093/rfs/hhaa079"
+"Original implementation" = "https://github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning"
 Repository = "https://github.com/maifeng/lmsy_w2v_rfs"
 Documentation = "https://maifeng.github.io/lmsy_w2v_rfs/"
 Changelog = "https://github.com/maifeng/lmsy_w2v_rfs/blob/main/CHANGELOG.md"

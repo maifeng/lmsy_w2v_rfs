@@ -48,7 +48,7 @@ up with their native traceback and non-zero code.
 
 | Flag | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `--preprocessor` | choice | `corenlp` | `corenlp` (paper-faithful, needs Java) / `spacy` (fastest) / `stanza` (Python-native) / `static` (list-only) / `none`. |
+| `--preprocessor` | choice | `none` | `none` (default, no extra deps) / `spacy` (lemmas+NER, no Java) / `corenlp` (paper-faithful, needs Java) / `stanza` (Python-native) / `static` (list-only). |
 | `--mwe-list` | str | `none` | Optional static MWE list post-pass. `none` skips. `finance` uses the packaged earnings-call example. Path loads a custom list. |
 | `--spacy-model` | str | `en_core_web_sm` | spaCy model name when `--preprocessor=spacy`. `en_core_web_trf` is the best-NER slower option. |
 | `--n-cores` | int | `4` | JVM threads for CoreNLP, `n_process` for spaCy / stanza. 4 is safe on an 8-core laptop; 8 on a workstation. |
@@ -110,11 +110,12 @@ Every `scores_*.csv` has columns: `Doc_ID`, one column per dimension
 
 ### Common invocations
 
-**Quickest: use a CSV with paper defaults.**
+**Quickest: a CSV with the zero-dependency default preprocessor (`none`).**
 
 ```bash
 lmsy-w2v-rfs run --input transcripts.csv --input-format csv \
-  --text-col transcript --id-col call_id --out runs/rfs2021
+  --text-col transcript --id-col call_id \
+  --seeds my_seeds.txt --out runs/quickstart
 ```
 
 **Paper-faithful CoreNLP, 8 threads, all three scoring methods:**

@@ -63,14 +63,16 @@ def test_config_rejects_empty_dimension() -> None:
 
 def test_config_defaults_enforce_two_phase_pipeline() -> None:
     cfg = Config(seeds=_SEEDS)
-    # Phase 1a: parser-based MWE + NER. Default = corenlp (paper-faithful).
-    assert cfg.preprocessor == "corenlp"
+    # Phase 1a: default = none (zero-dependency, runs on a bare install).
+    assert cfg.preprocessor == "none"
     # Phase 1b: optional curated list. Default off.
     assert cfg.mwe_list is None
     # Phase 2: statistical MWE learning. On by default.
     assert cfg.use_gensim_phrases is True
     assert cfg.phrase_passes == 2
     assert cfg.n_cores == 4
+    # Word2Vec defaults to skip-gram, matching Li et al. (2021).
+    assert cfg.w2v_sg == 1
 
 
 def test_config_dims_property_reflects_seeds() -> None:

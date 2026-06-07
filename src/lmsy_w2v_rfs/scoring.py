@@ -126,7 +126,9 @@ def score_document(
         for dim, words in expanded_words.items():
             if w not in words:
                 continue
-            idf = math.log(n_docs / df_dict[w]) if use_idf else 1.0  # type: ignore[index]
+            # .get(w, 1) guards against a dictionary word that never appeared
+            # in the corpus the df table was built on (df=1 -> idf=log N).
+            idf = math.log(n_docs / df_dict.get(w, 1)) if use_idf else 1.0  # type: ignore[union-attr]
             if method == "TF":
                 weight = tf
             elif method.startswith("WFIDF"):
@@ -276,7 +278,11 @@ def aggregate_to_firm_year(
     """
     merged = scores.merge(id_to_firm, how="left", left_on=[doc_id_col], right_on=id_col)
     merged = merged.drop(columns=[doc_id_col, id_col], errors="ignore")
+    # A document with zero retained tokens would make the per-100-token
+    # normalization 0/0 = NaN and poison the firm-year mean. Treat empty
+    # documents as a 0 score on every dimension instead.
+    denom = merged["document_length"].replace(0, np.nan)
     for dim in dims:
-        merged[dim] = 100.0 * merged[dim] / merged["document_length"]
+        merged[dim] = (100.0 * merged[dim] / denom).fillna(0.0)
     agg = merged.groupby([firm_col, time_col], as_index=False)[dims].mean()
     return agg.sort_values([firm_col, time_col]).reset_index(drop=True)

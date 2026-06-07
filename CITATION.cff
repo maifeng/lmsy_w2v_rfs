@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use this software, please cite both the paper and the software itself."
 type: software
 title: "lmsy_w2v_rfs"
-version: "0.1.2"
-date-released: "2026-04-28"
+version: "0.1.5"
+date-released: "2026-06-07"
 license: MIT
 url: "https://github.com/maifeng/lmsy_w2v_rfs"
 
