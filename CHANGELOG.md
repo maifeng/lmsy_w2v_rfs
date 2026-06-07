@@ -12,8 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Default preprocessor is now `none`** (was `corenlp`). A bare `pip install lmsy_w2v_rfs`
   plus `Config(seeds=...)` now runs end to end with no Java, no model download, and no
   extra dependencies. `corenlp` remains the opt-in paper-faithful backend.
-- **Word2Vec now trains skip-gram by default** (`w2v_sg=1`), matching Li et al. (2021).
-  Previously the gensim default (CBOW) was used implicitly. `w2v_sg` is now a `Config` field.
+- **Word2Vec algorithm is now an explicit `Config` field `w2v_sg`** (default `0` = CBOW).
+  CBOW matches the original Li et al. (2021) implementation and the published scores: the
+  paper does not specify the architecture, and the original code used gensim's CBOW default.
+  Set `w2v_sg=1` for skip-gram.
 - README restructured for an academic audience: full citation + BibTeX moved to the top,
   marketing-style tagline replaced with a methodological description, quickstart leads with
   `Pipeline.from_csv`, and a dedicated "Reproducing Li et al. (2021)" section added.
@@ -21,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Word-contribution / explainability**: `word_contributions(...)` and
+  `Pipeline.word_contributions(method)` decompose each dimension's score into per-word
+  contributions (absolute + relative + cumulative share), written to
+  `word_contributions_<METHOD>.csv`. Ported from the original `compute_score_contribution`.
+- **gensim passthrough escape hatches**: `Config.w2v_extra` and `Config.phrase_extra`
+  forward arbitrary keyword args to `gensim.Word2Vec` / `gensim.Phrases` (e.g.
+  `w2v_extra={"negative": 10}`, `phrase_extra={"scoring": "npmi"}`), and
+  `Config.corenlp_properties` adds/overrides CoreNLP server properties. The named fields
+  keep the documented paper defaults; the `*_extra` dicts cover everything else.
+- `Config.corenlp_max_char_length` (default 1,000,000) so very long transcripts are not
+  truncated by the CoreNLP server.
+- `Config.parse_chunk_size` processes documents in batches to cap peak memory on large corpora.
 - CoreNLP backend now pins `tokenize.options=splitHyphenated=false,splitForwardSlash=false`
   (with `ner.applyFineGrained=false`) so a modern CoreNLP 4.x server reproduces the 3.9.2
   tokenization the paper used.

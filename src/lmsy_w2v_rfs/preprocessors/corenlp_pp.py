@@ -78,6 +78,17 @@ class CoreNLPPreprocessor:
 
         self._cfg = config
         self._stanza = stanza
+        # Pin tokenization + NER to the CoreNLP 3.9.2 behavior the 2021 paper
+        # used. Modern CoreNLP (4.x) defaults split hyphenated and slash-joined
+        # tokens (e-commerce -> e/-/commerce) and emit fine-grained NER tags,
+        # all of which change the vocabulary and therefore the scores. Keeping
+        # these false reproduces the paper. Users may override or add server
+        # properties via config.corenlp_properties.
+        properties = {
+            "ner.applyFineGrained": "false",
+            "tokenize.options": "splitHyphenated=false,splitForwardSlash=false",
+        }
+        properties.update(config.corenlp_properties)
         self._client = stanza.server.CoreNLPClient(
             annotators=[
                 "tokenize", "ssplit", "pos", "lemma", "ner",
@@ -86,16 +97,9 @@ class CoreNLPPreprocessor:
             memory=config.corenlp_memory,
             threads=config.n_cores,
             timeout=config.corenlp_timeout_ms,
+            max_char_length=config.corenlp_max_char_length,
             be_quiet=True,
-            # Pin tokenization + NER to the CoreNLP 3.9.2 behavior the 2021
-            # paper used. Modern CoreNLP (4.x) defaults split hyphenated and
-            # slash-joined tokens (e-commerce -> e/-/commerce) and emit
-            # fine-grained NER tags, all of which change the vocabulary and
-            # therefore the scores. Keeping these false reproduces the paper.
-            properties={
-                "ner.applyFineGrained": "false",
-                "tokenize.options": "splitHyphenated=false,splitForwardSlash=false",
-            },
+            properties=properties,
         )
         self._client.start()
         log.info("CoreNLPPreprocessor ready")

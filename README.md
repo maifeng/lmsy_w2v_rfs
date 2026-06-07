@@ -228,6 +228,20 @@ p.score_df("TFIDF")
 
 Outputs land at `work_dir/outputs/scores_<METHOD>.csv`.
 
+### Which words drive a dimension?
+
+To validate dictionary quality, decompose each dimension's score into the
+contribution of each dictionary word across the corpus:
+
+```python
+contrib = p.word_contributions("TFIDF")   # dimension, word, contribution, relative, cumulative
+```
+
+This writes `work_dir/outputs/word_contributions_<METHOD>.csv` and shows, per
+dimension, each word's share and the running cumulative share — the standard
+way to check that (say) `innovation` is driven by genuine innovation terms
+rather than a few high-IDF artifacts.
+
 ---
 
 ## Loading documents and seeds
@@ -270,23 +284,28 @@ Config(
     preprocessor="none",               # "none" | "static" | "spacy" | "corenlp" | "stanza"
     mwe_list=None,                     # None | "finance" | path to a curated list
     spacy_model="en_core_web_sm",
+    parse_chunk_size=0,                # >0 processes docs in batches (caps memory on big corpora)
     n_cores=4,
     corenlp_memory="6G",
     corenlp_port=9002,
     corenlp_timeout_ms=120_000,        # per-request CoreNLP timeout (ms)
+    corenlp_max_char_length=1_000_000, # raise for very long transcripts
+    corenlp_properties={},             # extra CoreNLP server properties (override/add)
 
     # Step 1b
     use_gensim_phrases=True,
     phrase_passes=2,
     phrase_threshold=10.0,
     phrase_min_count=10,
+    phrase_extra={},                   # extra kwargs -> gensim Phrases (e.g. {"scoring": "npmi"})
 
     # Step 2
     w2v_dim=300,
     w2v_window=5,
     w2v_min_count=5,
     w2v_epochs=20,
-    w2v_sg=1,                          # 1 = skip-gram (Li et al. 2021); 0 = CBOW
+    w2v_sg=0,                          # 0 = CBOW (matches the original); 1 = skip-gram
+    w2v_extra={},                      # extra kwargs -> gensim Word2Vec (e.g. {"negative": 10, "hs": 0})
 
     # Step 3
     n_words_dim=500,                   # paper's threshold for the dictionary cutoff

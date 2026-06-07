@@ -44,6 +44,7 @@ from .scoring import (
     document_frequencies,
     iter_doc_level_corpus,
     score_documents,
+    word_contributions,
     zca_whiten,
 )
 from .w2v import load_word2vec, train_word2vec
@@ -201,24 +202,33 @@ class Pipeline:
             with sents_tmp.open("w", encoding="utf-8", newline="\n") as f_txt, \
                  ids_tmp.open("w", encoding="utf-8", newline="\n") as f_ids:
                 i = 0
-                # process_documents() is optional on the Protocol; fall back
-                # to a serial loop over process() for simple backends.
-                stream = (
-                    preprocessor.process_documents(texts_nonempty)
-                    if hasattr(preprocessor, "process_documents")
-                    else (preprocessor.process(t) for t in texts_nonempty)
-                )
-                for did, sentences in zip(ids_nonempty, stream, strict=False):
-                    if mwe_extra:
-                        sentences = apply_mwe_list(sentences, mwe_extra)
-                    for j, sent in enumerate(sentences):
-                        if not sent:
-                            continue
-                        f_txt.write(" ".join(sent) + "\n")
-                        f_ids.write(f"{did}_{j}\n")
-                    i += 1
-                    if i % 100 == 0:
-                        log.info("parse: %d docs", i)
+                # Process in chunks when parse_chunk_size > 0 to cap how many
+                # parsed documents are held in flight at once (helps large
+                # corpora); 0 means a single pass over everything.
+                cs = self.config.parse_chunk_size
+                starts = range(0, len(texts_nonempty), cs) if cs > 0 else [0]
+                for start in starts:
+                    end = start + cs if cs > 0 else len(texts_nonempty)
+                    chunk_texts = texts_nonempty[start:end]
+                    chunk_ids = ids_nonempty[start:end]
+                    # process_documents() is optional on the Protocol; fall back
+                    # to a serial loop over process() for simple backends.
+                    stream = (
+                        preprocessor.process_documents(chunk_texts)
+                        if hasattr(preprocessor, "process_documents")
+                        else (preprocessor.process(t) for t in chunk_texts)
+                    )
+                    for did, sentences in zip(chunk_ids, stream, strict=False):
+                        if mwe_extra:
+                            sentences = apply_mwe_list(sentences, mwe_extra)
+                        for j, sent in enumerate(sentences):
+                            if not sent:
+                                continue
+                            f_txt.write(" ".join(sent) + "\n")
+                            f_ids.write(f"{did}_{j}\n")
+                        i += 1
+                        if i % 100 == 0:
+                            log.info("parse: %d docs", i)
             sents_tmp.replace(self.parsed_sents_path)
             ids_tmp.replace(self.parsed_ids_path)
         finally:
@@ -373,6 +383,53 @@ class Pipeline:
             df.to_csv(out_path, index=False)
             self._scores[method] = df
         return self._scores
+
+    def word_contributions(
+        self,
+        method: ScoringMethod = "TFIDF",
+        *,
+        force: bool = False,
+    ) -> pd.DataFrame:
+        """Per-word contribution of each dictionary word to each dimension.
+
+        A diagnostic for dictionary quality: it shows which words drive each
+        dimension's scores across the corpus (absolute contribution plus each
+        word's relative and cumulative share of its dimension). Writes
+        ``outputs/word_contributions_<METHOD>.csv``.
+
+        Args:
+            method: Scoring method to decompose.
+            force: Recompute even if the CSV exists.
+
+        Returns:
+            Tidy DataFrame (dimension, word, contribution, relative, cumulative).
+        """
+        if self._culture_dict is None:
+            self.expand_dictionary()
+        assert self._culture_dict is not None
+
+        out_path = self.work_dir / "outputs" / f"word_contributions_{method.replace('+', '_')}.csv"
+        if not force and out_path.exists():
+            log.info("word_contributions[%s]: reusing %s", method, out_path)
+            return pd.read_csv(out_path)
+
+        expanded = {d: set(ws) for d, ws in self._culture_dict.items()}
+        weights = similarity_weights(self._culture_dict)
+        docs_for_df = list(
+            iter_doc_level_corpus(self.training_corpus_path, self.parsed_ids_path)
+        )
+        df_dict, n_docs = document_frequencies(text for _, text in docs_for_df)
+        contrib = word_contributions(
+            docs_for_df,
+            expanded_words=expanded,
+            method=method,
+            df_dict=df_dict,
+            n_docs=n_docs,
+            word_weights=weights if "SIMWEIGHT" in method else None,
+        )
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        contrib.to_csv(out_path, index=False)
+        return contrib
 
     # ---------- one-call convenience ---------------------------------
 

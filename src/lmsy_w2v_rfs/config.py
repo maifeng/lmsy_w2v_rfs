@@ -115,6 +115,12 @@ class Config:
         corenlp_memory: JVM heap for the CoreNLP server.
         corenlp_port: TCP port the CoreNLP server listens on.
         corenlp_timeout_ms: Per-request CoreNLP timeout.
+        corenlp_max_char_length: Max characters per document the CoreNLP
+            server accepts. Raise for very long transcripts.
+        corenlp_properties: Extra CoreNLP server properties merged on top of
+            (and able to override) the pinned reproducibility defaults.
+        parse_chunk_size: If > 0, documents are preprocessed in batches of
+            this size to cap peak memory on large corpora; 0 processes all.
         n_cores: Parallel workers for parsing and training.
         use_gensim_phrases: Whether to run gensim Phrases.
         phrase_passes: Number of phrase passes (1 bigram, 2 bigram+trigram).
@@ -124,8 +130,15 @@ class Config:
         w2v_window: Word2Vec context window.
         w2v_min_count: Word2Vec minimum token count.
         w2v_epochs: Word2Vec training epochs.
-        w2v_sg: Word2Vec training algorithm: ``1`` for skip-gram (the
-            default, as in Li et al. 2021), ``0`` for CBOW.
+        w2v_sg: Word2Vec training algorithm: ``0`` for CBOW (the default,
+            matching the original Li et al. 2021 implementation, which used
+            gensim's default; the paper does not specify the architecture),
+            ``1`` for skip-gram.
+        w2v_extra: Extra keyword arguments forwarded verbatim to
+            ``gensim.models.Word2Vec`` (e.g. ``negative``, ``hs``,
+            ``sample``, ``ns_exponent``). Keys here override the named fields.
+        phrase_extra: Extra keyword arguments forwarded to
+            ``gensim.models.Phrases`` (e.g. ``scoring="npmi"``).
         n_words_dim: Top-k expanded words per dimension.
         dict_restrict_vocab: Restrict expansion to the top fraction of vocab.
         min_similarity: Discard expansion candidates below this cosine.
@@ -142,11 +155,14 @@ class Config:
     preprocessor: PreprocessorName = "none"
     mwe_list: str | Path | None = None
     spacy_model: str = "en_core_web_sm"
+    parse_chunk_size: int = 0  # >0 processes documents in batches of this size (caps memory); 0 = all at once
 
     # CoreNLP-specific (used only when preprocessor == "corenlp")
     corenlp_memory: str = "6G"
     corenlp_port: int = 9002
     corenlp_timeout_ms: int = 120_000
+    corenlp_max_char_length: int = 1_000_000  # CoreNLP server cap; long transcripts need a high value
+    corenlp_properties: dict[str, Any] = field(default_factory=dict)  # extra server properties (override/add)
     n_cores: int = 4
 
     # Phase 2: gensim Phrases
@@ -154,13 +170,15 @@ class Config:
     phrase_passes: int = 2
     phrase_threshold: float = 10.0
     phrase_min_count: int = 10
+    phrase_extra: dict[str, Any] = field(default_factory=dict)  # extra kwargs forwarded to gensim Phrases
 
     # Word2Vec
     w2v_dim: int = 300
     w2v_window: int = 5
     w2v_min_count: int = 5
     w2v_epochs: int = 20
-    w2v_sg: int = 1  # 1 = skip-gram (Li et al. 2021); 0 = CBOW
+    w2v_sg: int = 0  # 0 = CBOW (matches the original LMSY code + published scores); 1 = skip-gram
+    w2v_extra: dict[str, Any] = field(default_factory=dict)  # extra kwargs forwarded to gensim Word2Vec (e.g. negative, hs, sample)
 
     # Dictionary expansion
     n_words_dim: int = 500
@@ -204,6 +222,8 @@ class Config:
             )
         if self.w2v_sg not in (0, 1):
             raise ValueError(f"w2v_sg must be 0 (CBOW) or 1 (skip-gram). Got: {self.w2v_sg}")
+        if self.parse_chunk_size < 0:
+            raise ValueError(f"parse_chunk_size must be >= 0. Got: {self.parse_chunk_size}")
         if self.dict_restrict_vocab is not None and not (0.0 < self.dict_restrict_vocab <= 1.0):
             raise ValueError(
                 "dict_restrict_vocab must be a fraction in (0, 1] (e.g. 0.2 = top "

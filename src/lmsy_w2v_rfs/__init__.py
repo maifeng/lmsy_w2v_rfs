@@ -72,6 +72,7 @@ from .scoring import (
     iter_doc_level_corpus,
     score_document,
     score_documents,
+    word_contributions,
     zca_whiten,
 )
 from .w2v import load_word2vec, train_word2vec
@@ -126,6 +127,7 @@ __all__ = [
     "ScoringMethod",
     "score_document",
     "score_documents",
+    "word_contributions",
     "document_frequencies",
     "iter_doc_level_corpus",
     "aggregate_to_firm_year",

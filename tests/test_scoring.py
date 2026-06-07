@@ -11,6 +11,7 @@ from lmsy_w2v_rfs.scoring import (
     document_frequencies,
     score_document,
     score_documents,
+    word_contributions,
 )
 
 
@@ -86,6 +87,30 @@ def test_score_documents_returns_dataframe() -> None:
     assert list(df.columns) == ["Doc_ID", "innovation", "integrity", "document_length"]
     assert df.loc[df.Doc_ID == "a", "integrity"].iloc[0] == 2.0
     assert df.loc[df.Doc_ID == "b", "innovation"].iloc[0] == 2.0
+
+
+def test_word_contributions_shares_sum_to_one() -> None:
+    docs = [
+        ("a", "integrity integrity ethics"),
+        ("b", "ethics innovation"),
+        ("c", "innovation innovation passion"),
+    ]
+    expanded = {
+        "integrity": {"integrity", "ethics"},
+        "innovation": {"innovation", "passion"},
+    }
+    df, n = document_frequencies([t for _, t in docs])
+    out = word_contributions(docs, expanded, method="TFIDF", df_dict=df, n_docs=n)
+    assert list(out.columns) == [
+        "dimension", "word", "contribution", "relative", "cumulative",
+    ]
+    # Relative shares within each dimension sum to 1, cumulative ends at ~1.
+    for dim, grp in out.groupby("dimension"):
+        assert abs(grp["relative"].sum() - 1.0) < 1e-9
+        assert abs(grp["cumulative"].iloc[-1] - 1.0) < 1e-9
+    # Within a dimension, contribution is sorted descending.
+    integ = out[out.dimension == "integrity"]["contribution"].tolist()
+    assert integ == sorted(integ, reverse=True)
 
 
 def test_document_frequencies() -> None:

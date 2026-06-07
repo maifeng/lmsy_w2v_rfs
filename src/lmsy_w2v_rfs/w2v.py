@@ -36,8 +36,7 @@ def train_word2vec(
     corpus = gensim.models.word2vec.PathLineSentences(
         str(sentences_path), max_sentence_length=10_000_000
     )
-    model = Word2Vec(
-        corpus,
+    params: dict = dict(
         vector_size=config.w2v_dim,
         window=config.w2v_window,
         min_count=config.w2v_min_count,
@@ -46,6 +45,10 @@ def train_word2vec(
         sg=config.w2v_sg,
         seed=config.random_state,
     )
+    # Escape hatch: forward any extra gensim Word2Vec args (negative, hs, ...).
+    # Keys in w2v_extra override the named defaults above.
+    params.update(config.w2v_extra)
+    model = Word2Vec(corpus, **params)
     model.save(str(model_path))
     return model
 

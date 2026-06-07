@@ -192,6 +192,90 @@ def score_documents(
     return df
 
 
+def word_contributions(
+    documents: Iterable[tuple[str, str]],
+    expanded_words: dict[str, list[str] | set[str]],
+    method: ScoringMethod = "TFIDF",
+    df_dict: dict[str, int] | None = None,
+    n_docs: int | None = None,
+    word_weights: dict[str, float] | None = None,
+    show_progress: bool = True,
+) -> pd.DataFrame:
+    """Decompose each dimension's corpus-level score into per-word contributions.
+
+    For every dictionary word this accumulates its total weighted, length-
+    normalized contribution across the corpus, then reports each word's share
+    of its dimension (``relative``) and the running cumulative share. This is
+    the standard diagnostic for checking that a dimension is driven by
+    semantically coherent words rather than a few high-IDF artifacts.
+
+    Args:
+        documents: Iterable of ``(doc_id, text)`` pairs.
+        expanded_words: Expanded dictionary per dimension.
+        method: Scoring method (same weighting as :func:`score_document`).
+        df_dict: Document frequencies (non-TF methods).
+        n_docs: Total document count (non-TF methods).
+        word_weights: Per-word weights (SIMWEIGHT methods).
+        show_progress: Print a tqdm bar.
+
+    Returns:
+        Tidy DataFrame with columns ``dimension, word, contribution,
+        relative, cumulative``, sorted by descending contribution within
+        each dimension.
+    """
+    use_idf = method != "TF"
+    use_sim = method.endswith("+SIMWEIGHT")
+    if use_idf and (df_dict is None or n_docs is None):
+        raise ValueError("df_dict and n_docs are required for non-TF methods")
+    if use_sim and word_weights is None:
+        raise ValueError("word_weights is required for SIMWEIGHT methods")
+
+    contrib: dict[str, defaultdict[str, float]] = {
+        dim: defaultdict(float) for dim in expanded_words
+    }
+    docs = tqdm.tqdm(documents, disable=not show_progress, desc=f"contrib {method}")
+    for _doc_id, text in docs:
+        tokens = text.split()
+        doc_len = len(tokens)
+        if doc_len == 0:
+            continue
+        for w, tf in Counter(tokens).items():
+            idf = math.log(n_docs / df_dict.get(w, 1)) if use_idf else 1.0  # type: ignore[union-attr]
+            if method == "TF":
+                weight = float(tf)
+            elif method.startswith("WFIDF"):
+                weight = (1 + math.log(tf)) * idf
+            else:
+                weight = tf * idf
+            if use_sim:
+                weight *= word_weights[w]  # type: ignore[index]
+            weight /= doc_len
+            for dim, words in expanded_words.items():
+                if w in words:
+                    contrib[dim][w] += weight
+
+    rows: list[dict[str, object]] = []
+    for dim in sorted(contrib):
+        items = sorted(contrib[dim].items(), key=lambda kv: kv[1], reverse=True)
+        total = sum(v for _, v in items) or 1.0
+        cumulative = 0.0
+        for word, value in items:
+            relative = value / total
+            cumulative += relative
+            rows.append(
+                {
+                    "dimension": dim,
+                    "word": word,
+                    "contribution": value,
+                    "relative": relative,
+                    "cumulative": cumulative,
+                }
+            )
+    return pd.DataFrame(
+        rows, columns=["dimension", "word", "contribution", "relative", "cumulative"]
+    )
+
+
 def zca_whiten(
     scores: pd.DataFrame,
     dims: list[str],

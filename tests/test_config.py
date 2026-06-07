@@ -71,8 +71,8 @@ def test_config_defaults_enforce_two_phase_pipeline() -> None:
     assert cfg.use_gensim_phrases is True
     assert cfg.phrase_passes == 2
     assert cfg.n_cores == 4
-    # Word2Vec defaults to skip-gram, matching Li et al. (2021).
-    assert cfg.w2v_sg == 1
+    # Word2Vec defaults to CBOW (sg=0), matching the original LMSY code.
+    assert cfg.w2v_sg == 0
 
 
 def test_config_dims_property_reflects_seeds() -> None:

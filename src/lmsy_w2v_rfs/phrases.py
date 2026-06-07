@@ -39,12 +39,17 @@ def train_phrase_model(
         str(sentences_path), max_sentence_length=10_000_000
     )
     n_lines = _count_lines(sentences_path)
-    phraser = models.phrases.Phrases(
-        tqdm.tqdm(corpus, total=n_lines, desc=f"phrases {sentences_path.name}"),
+    phrase_params: dict = dict(
         min_count=config.phrase_min_count,
         threshold=config.phrase_threshold,
         scoring="default",
         connector_words=config.stopwords,
+    )
+    # Escape hatch: forward extra gensim Phrases args (e.g. scoring="npmi").
+    phrase_params.update(config.phrase_extra)
+    phraser = models.phrases.Phrases(
+        tqdm.tqdm(corpus, total=n_lines, desc=f"phrases {sentences_path.name}"),
+        **phrase_params,
     )
     phraser.save(str(model_path))
     return phraser
