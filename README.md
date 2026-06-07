@@ -108,10 +108,29 @@ the corpus's own vocabulary — note that the seeds never mentioned `401k_match`
   expanded: salary, competitive, 401k_match, dental, medical, bonuses
 ```
 
-The same `Pipeline` is available from in-memory lists, DataFrames, JSONL, and
-directories — see [Loading documents and seeds](#loading-documents-and-seeds).
+### Other ways to load documents and seeds
 
-## Reproducing Li et al. (2021)
+The same `Pipeline` also accepts in-memory lists, DataFrames, JSONL, and directories:
+
+```python
+Pipeline(texts=[...], doc_ids=[...], work_dir=..., config=cfg)              # in-memory list
+Pipeline.from_csv("docs.csv", text_col="text", id_col="id", ...)            # CSV
+Pipeline.from_dataframe(df, text_col="text", id_col="id", ...)              # DataFrame
+Pipeline.from_directory("./docs/", pattern="*.txt", ...)                    # one file per doc
+Pipeline.from_text_file("docs.txt", id_path="ids.txt", ...)                 # one doc per line
+Pipeline.from_jsonl("docs.jsonl", text_key="text", id_key="id", ...)        # JSONL
+```
+
+Seeds accept a Python dict, a JSON file, or a plain text file:
+
+```python
+from lmsy_w2v_rfs import load_seeds
+Config(seeds=load_seeds("my_seeds.json"))     # or .txt, or pass a dict directly
+```
+
+CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv --out runs/x`.
+
+### Reproducing Li et al. (2021)
 
 The package ships the paper's 47 seed words across five culture dimensions, and the
 CoreNLP backend reproduces the paper's Phase 1 parsing:
@@ -250,28 +269,6 @@ rather than a few high-IDF artifacts.
 
 ---
 
-## Loading documents and seeds
-
-```python
-Pipeline(texts=[...], doc_ids=[...], work_dir=..., config=cfg)              # in-memory list
-Pipeline.from_csv("docs.csv", text_col="text", id_col="id", ...)            # CSV
-Pipeline.from_dataframe(df, text_col="text", id_col="id", ...)              # DataFrame
-Pipeline.from_directory("./docs/", pattern="*.txt", ...)                    # one file per doc
-Pipeline.from_text_file("docs.txt", id_path="ids.txt", ...)                 # one doc per line
-Pipeline.from_jsonl("docs.jsonl", text_key="text", id_key="id", ...)        # JSONL
-```
-
-Seeds accept a Python dict, a JSON file, or a plain text file:
-
-```python
-from lmsy_w2v_rfs import load_seeds
-Config(seeds=load_seeds("my_seeds.json"))     # or .txt, or pass a dict directly
-```
-
-CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv --out runs/x`.
-
----
-
 ## Large corpora
 
 Once parsing finishes, downstream stages stream through disk: `clean` reads parsed sentences line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The bottleneck is the **input stage**: the document loader holds the corpus in a Python list before parsing begins.
@@ -329,18 +326,8 @@ Config(
 
 ---
 
-## Documentation
+## Resources
 
-Full docs (concepts, how-to guides, API reference): https://maifeng.github.io/lmsy_w2v_rfs/
-
-The citation and BibTeX are [at the top of this README](#citation).
-
-## Links
-
-- GitHub: [github.com/maifeng/lmsy_w2v_rfs](https://github.com/maifeng/lmsy_w2v_rfs)
-- PyPI: [pypi.org/project/lmsy_w2v_rfs](https://pypi.org/project/lmsy_w2v_rfs/)
-- Original implementation: [github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning](https://github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning)
-
-## License
-
-MIT.
+- **Documentation** (concepts, how-to guides, API reference): [maifeng.github.io/lmsy_w2v_rfs](https://maifeng.github.io/lmsy_w2v_rfs/)
+- **Original implementation**: [MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning](https://github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning)
+- **License**: MIT. The citation and BibTeX are [at the top](#citation).
