@@ -10,7 +10,7 @@ Three complementary tests, all run on the same hardware (Apple Silicon M-series 
 
 1. **60-phrase MWE test**. Hand-labeled gold MWEs across six categories: idiomatic (10), grammaticalized fixed (13), compound nouns (10), business jargon (11), phrasal verbs (8), named entities (8). A backend "catches" a phrase if it proposes a join whose endpoints both fall inside the gold MWE.
 2. **50-sentence NER test**. Hand-labeled entity spans and types across person, organization, location, money, date, and other categories. Scored on both span recall and type accuracy.
-3. **1,393-document end-to-end bakeoff**. The RFS 2021 sample of real earnings-call transcripts, parsed with each backend at `n_cores=8`. Measured wall time, CPU utilization, entity count, and sentence count.
+3. **1,393-document end-to-end bakeoff**. Real earnings-call transcripts, parsed with each backend at `n_cores=8`. Measured wall time, CPU utilization, entity count, and sentence count.
 
 ---
 
@@ -54,7 +54,7 @@ The old UD v1 `mwe` relation was renamed, not replaced. UD v2's [thematic report
 - `flat`: head-less MWEs, mostly proper names. `New_York_City`, `Barack_Obama`. Absorbs the old `name` and `foreign` labels.
 - `compound`: compound nouns (`phone_book`), phrasal verbs via `compound:prt` (`look_up`, `roll_out`), and serial verbs.
 
-Idioms like `beat_a_dead_horse` or `piece_of_cake` get no UD edge at all under v2. That is by design: UD is a dependency scheme, not an idiom inventory. The [PARSEME project](https://parsemefr.lis-lab.fr/parseme-st-guidelines/1.1/) publishes a separate layer for verbal MWEs, but no production pip package implements it.
+Idioms like `beat_a_dead_horse` or `piece_of_cake` get no UD edge at all under v2. That is by design: UD encodes grammatical dependencies, so idioms fall outside its scope. The [PARSEME project](https://parsemefr.lis-lab.fr/parseme-st-guidelines/1.1/) publishes a separate layer for verbal MWEs, but no production pip package implements it.
 
 Practical consequence: any parser-based preprocessor inherits this ceiling. If you want idiom-level MWE recall, pair the parser with a static list.
 

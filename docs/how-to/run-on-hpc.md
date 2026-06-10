@@ -43,7 +43,7 @@ p = Pipeline.from_text_file("shard_000.txt", work_dir="runs/shard_000", config=c
 p.run()
 ```
 
-Measured numbers on the 1,393-doc RFS 2021 sample corpus:
+Measured numbers on the 1,393-doc benchmark corpus:
 
 | Backend | `n_cores=1` | `n_cores=4` | `n_cores=8` | Speedup |
 |---|---|---|---|---|
@@ -144,7 +144,7 @@ p.clean()
 `corenlp_port` is offset by `i` so each array task gets its own JVM server.
 Ports collide if multiple tasks land on the same node; this avoids that.
 
-### 5. SGE template (University of Iowa Argon and similar)
+### 5. SGE / UGE template (any Grid Engine cluster)
 
 SGE uses `qsub` and `NSLOTS` instead of SLURM's `srun` and `SLURM_CPUS_PER_TASK`.
 Same pipeline, different job scheduler.
@@ -156,7 +156,7 @@ Same pipeline, different job scheduler.
 #$ -pe smp 8                    # 8 cores per task
 #$ -l mem_free=24G
 #$ -l h_rt=04:00:00
-#$ -q all.q                     # or UI-GPU / UI-MPI / UI-HM on Argon
+#$ -q all.q                     # queue name varies; list yours with `qstat -g c`
 #$ -o logs/parse_$JOB_ID_$TASK_ID.out
 #$ -j y                         # merge stdout and stderr
 #$ -cwd                         # run from submit directory
@@ -168,11 +168,10 @@ export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
 export TOKENIZERS_PARALLELISM=false
 
-# Point CoreNLP cache at scratch so the home quota is not burned.
-export LMSY_W2V_RFS_HOME=/nfsscratch/$USER/lmsy_cache
+# Point the cache at scratch so a small home quota isn't filled (adjust the path).
+export LMSY_W2V_RFS_HOME=/scratch/$USER/lmsy_cache
 
-# Load modules. On Argon adjust module names as needed.
-module load stack/legacy
+# Load modules (names vary by cluster; check `module avail`).
 module load java/21
 module load python/3.12
 
@@ -199,19 +198,17 @@ p.clean()
 
 Submit with `qsub parse.sh`. Monitor with `qstat -u $USER`.
 
-On the University of Iowa **Argon** cluster specifically:
+Cluster-specific details vary, so check your site's user guide:
 
-- Shared home quota is small; use `/nfsscratch/$USER/` for the CoreNLP
-  cache, phrase models, and intermediate `work_dir` output. Copy only the
-  final `outputs/*.csv` to your project directory at the end.
-- `-q all.q` is the default queue; `UI-HM` is the high-memory queue if
-  you need `>64 GB` per task.
-- Argon does not preload `java` or Python 3.12 by default. The `module
-  load` lines above are the reproducible way to pin versions; check
-  `module avail java` for the current module name (Argon renames
-  occasionally).
-- Argon is Linux, so fork-based multiprocessing works and spaCy workers
-  share the model via copy-on-write.
+- Queue names, memory queues, and time limits differ per site. List live
+  queue capacity with `qstat -g c`.
+- Where the home quota is small, point `LMSY_W2V_RFS_HOME` at scratch for the
+  CoreNLP cache, phrase models, and intermediate `work_dir` output, and copy
+  only the final `outputs/*.csv` back at the end.
+- Module names for Java and Python vary; the `module load` lines above pin
+  versions reproducibly. Run `module avail` to find the names at your site.
+- On Linux, fork-based multiprocessing works and spaCy workers share the
+  model via copy-on-write.
 
 ## Gotcha: fork vs spawn on macOS
 

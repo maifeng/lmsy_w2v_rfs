@@ -104,7 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integrity seed list in `concepts/word2vec-dictionary.md`: was 10 entries with 4 not in JSON; now 14 entries matching `seeds_culture.json`.
 - `docs/how-to/resume-after-crash.md` stage table: `score` reads `corpora/pass{N}.txt` (when `use_gensim_phrases=True`), not `cleaned/sentences.txt`.
 - `docs/how-to/troubleshooting.md`: parameter `memory=` -> `Config(corenlp_memory=)`; default `4 GB` -> `6G`; port `9000` -> `9002`; 3 `Config()` snippets missing `seeds=`.
-- Stale `use_corenlp=False` reference in package CLAUDE.md (replaced by `preprocessor="none"` in v0.1.1).
+- Stale `use_corenlp=False` references replaced by `preprocessor="none"` in the v0.1.1 docs.
 - Dead "Limits" cross-reference in `concepts/scoring.md`.
 - CHANGELOG: `a81a0bd` (invalidate stale score CSVs on dictionary curation) moved from `[0.1.2]` to `[0.1.1]` (where it actually shipped).
 - `docs/index.md` footer: 3 missing how-to pages added (`run-from-cli.md`, `whiten-scores.md`, `run-on-hpc.md`).
@@ -128,9 +128,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/reference/scoring.md`: appended `zca_whiten` reference entry, which
   was exported in `__all__` and used in the how-to guide but had no reference
   page.
-- `CLAUDE.md`: replaced stale "Not-yet-done" section with accurate "Current
-  status (as of v0.1.3)" section reflecting the shipped Colab notebook, full
-  MkDocs site, and PyPI publication.
 
 ## [0.1.2] - 2026-04-28
 
@@ -146,7 +143,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README badges: Open in Colab, PyPI version, License. (`0d25001`)
 - `notebooks/01_quickstart_colab.ipynb`: Colab-ready notebook, force-tracked
   in git. (`75e8990`)
-- `notebooks/data/glassdoor_culture_2000.csv`: 2,000-review workshop corpus
+- `notebooks/data/glassdoor_culture_2000.csv`: 2,000-review demo corpus
   shipped in the repo for Colab access. (`75e8990`)
 ## [0.1.1] - 2026-04-15
 
@@ -155,7 +152,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Pipeline.score_df`: merge now detects `Doc_ID` (capitalized) column name
   dynamically instead of assuming `doc_id`. (`9790f42`)
 - `Config`: `preprocessor="none"` replaces the removed `use_corenlp` boolean
-  flag. Updated notebook and CLAUDE.md to reflect the correct field.
+  flag. Updated the notebook to reflect the correct field.
   (`ff71244`)
 
 ### Added
@@ -186,7 +183,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `CULTURE_SEEDS` and `CULTURE_DIMS` removed from the public API. (`0f51edc`)
 - CLI `--seeds` is now required. (`0f51edc`)
-- README, MkDocs pages, and CLAUDE.md reframed to reflect the theory-agnostic
+- README and MkDocs pages reframed to reflect the theory-agnostic
   scope. (`0f51edc`)
 
 ## [0.1.0a1] - 2026-04-15

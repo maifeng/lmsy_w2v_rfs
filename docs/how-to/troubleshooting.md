@@ -146,7 +146,7 @@ The `SpacyPreprocessor` sets `torch.set_num_threads(1)` at construction time, bu
 
 ## `Pipeline.parse took much longer than the benchmark suggested`
 
-**Symptoms:** An 8-worker CoreNLP run takes 70+ minutes on 1,393 documents instead of the expected 13 minutes. CPU utilization stays near 100% instead of 700-800%.
+**Symptoms:** An 8-worker CoreNLP run takes 70+ minutes on 1,393 documents instead of the expected 11.7 minutes. CPU utilization stays near 100% instead of 700-800%.
 
 **Cause:** Older versions of `Pipeline.parse()` submitted documents to the preprocessor one at a time, even when the backend supported concurrent submission. The JVM had eight threads allocated but only one was ever busy.
 

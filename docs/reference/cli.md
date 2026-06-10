@@ -146,6 +146,7 @@ lmsy-w2v-rfs run \
 ```bash
 lmsy-w2v-rfs run \
   --input ./10k_filings/ --input-format directory --glob-pattern "*.txt" \
+  --seeds my_seeds.txt \
   --mwe-list finance --zca-whiten \
   --out runs/10k
 ```
@@ -156,6 +157,7 @@ lmsy-w2v-rfs run \
 lmsy-w2v-rfs run \
   --input dump.jsonl --input-format jsonl \
   --text-key body --id-key id \
+  --seeds my_seeds.txt \
   --preprocessor none --phrase-min-count 5 \
   --out runs/jsonl_demo
 ```

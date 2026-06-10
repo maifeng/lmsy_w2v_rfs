@@ -26,13 +26,13 @@
 # **Paper:** https://doi.org/10.1093/rfs/hhaa079
 #
 # **Demo corpus**: 2,000 Glassdoor "pros" reviews, a small public sample
-# bundled with the package so this quickstart runs with no data setup.
+# kept in this repo and downloaded in section 1 below.
 
 # %% [markdown]
 # ## 1. Install and download the corpus
 
 # %%
-# Colab: install the package and download the workshop corpus.
+# Colab: install the package and download the demo corpus.
 # !pip install -q -U lmsy_w2v_rfs
 # !wget -q https://raw.githubusercontent.com/maifeng/lmsy_w2v_rfs/main/notebooks/data/glassdoor_culture_2000.csv
 
@@ -74,9 +74,14 @@ import os
 import pandas as pd
 from lmsy_w2v_rfs import Config, Pipeline
 
-CORPUS_PATH = "glassdoor_culture_2000.csv"
-if not os.path.exists(CORPUS_PATH):
-    CORPUS_PATH = "../../../data/glassdoor_culture_2000.csv"
+# On Colab, section 1 downloads the CSV into the working directory (first
+# candidate). The others let the notebook also run locally regardless of which
+# directory it is launched from.
+_NAME = "glassdoor_culture_2000.csv"
+CORPUS_PATH = next(
+    (p for p in (_NAME, f"data/{_NAME}", f"notebooks/data/{_NAME}") if os.path.exists(p)),
+    _NAME,
+)
 
 corpus = pd.read_csv(CORPUS_PATH)
 texts = corpus["text"].tolist()

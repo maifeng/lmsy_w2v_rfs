@@ -36,7 +36,7 @@ The default, `"none"`, does no parsing — it just splits on whitespace and lowe
 
 ## Phase 1b: optional static MWE list
 
-After the main preprocessor runs, a curated MWE list (`Config.mwe_list`) can join anything the parser missed. The packaged `"finance"` list is a hand-curated 200-entry file mixing UD `fixed` prepositional phrases, earnings-call jargon, and the RFS 2021 dictionary appendix. It is an example, not a default.
+After the main preprocessor runs, a curated MWE list (`Config.mwe_list`) can join anything the parser missed. The packaged `"finance"` list is a hand-curated ~246-entry file of UD `fixed` prepositional phrases and earnings-call jargon. Pass `mwe_list="finance"` to opt in.
 
 ## Phase 2: statistical, gensim Phrases
 

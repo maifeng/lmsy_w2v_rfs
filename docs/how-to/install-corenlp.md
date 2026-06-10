@@ -4,8 +4,8 @@
 
 CoreNLP is the opt-in, paper-faithful preprocessor: it reproduces the 2021
 paper's Phase 1 behavior exactly and gives the best syntactic MWE coverage on
-the benchmark (76%, versus 57% for stanza and 0% for spaCy). It is not the
-default (that is `"none"`, which needs no setup). Getting CoreNLP running takes
+the benchmark (76%, versus 57% for stanza and 0% for spaCy). The default
+backend is `"none"`, which needs no setup. Getting CoreNLP running takes
 three things working at once: a Java 8+ runtime on `$PATH`, the `[corenlp]`
 extra installed, and the ~1 GB CoreNLP archive expanded into the cache
 directory. If Java is missing the backend now raises a clear message telling

@@ -1,6 +1,6 @@
 # Design decisions
 
-This page explains the "why" behind the load-bearing choices in `lmsy_w2v_rfs`. The package packages a research pipeline from Li, Mai, Shen, Yan (2021), so several decisions are driven by paper-faithfulness. Others are driven by an empirical benchmark on 60 multi-word expressions, 50 NER sentences, and 300 earnings-call documents. See [MWE benchmark comparison](mwe-comparison.md) for the numbers.
+This page explains the "why" behind the load-bearing choices in `lmsy_w2v_rfs`. The package packages a research pipeline from Li, Mai, Shen, Yan (2021), so several decisions are driven by paper-faithfulness. Others are driven by an empirical benchmark on 60 multi-word expressions, 50 NER sentences, and 1,393 earnings-call documents. See [MWE benchmark comparison](mwe-comparison.md) for the numbers.
 
 ---
 
@@ -10,7 +10,7 @@ The default is `preprocessor="none"`: a bare `pip install lmsy_w2v_rfs` runs the
 
 CoreNLP is the recommended opt-in when you want the paper's exact Phase 1 behavior. On the 60-phrase test set, CoreNLP 4.5 catches 16 of 21 syntactic MWEs (76%), compared with 12 of 21 for stanza (57%) and 0 of 21 for spaCy. The gap is in UD v2 `fixed` patterns like `with_respect_to`, `in_spite_of`, `due_to`, which CoreNLP's PTB-to-UD converter encodes as hand-written rules; stanza and spaCy must predict these from treebank data where the patterns are sparse.
 
-On throughput, CoreNLP's JVM thread pool scales 5.74x from 1 to 8 threads because all threads share one loaded model, processing the full 1,393-document RFS 2021 sample corpus in 11.7 minutes at `n_cores=8`. spaCy is faster (~4 minutes) but with 0% syntactic MWE recall. The cost of CoreNLP is real — Java 8+ on `$PATH` and a ~1 GB one-time download — so it is opt-in, not the default. Users who want richer parsing without Java should reach for `spacy`.
+On throughput, CoreNLP's JVM thread pool scales 5.74x from 1 to 8 threads because all threads share one loaded model, processing the full 1,393-document benchmark corpus in 11.7 minutes at `n_cores=8`. spaCy is faster (~4 minutes) but with 0% syntactic MWE recall. The cost of CoreNLP is real: Java 8+ on `$PATH` and a ~1 GB one-time download, which is why it is opt-in. Users who want richer parsing without Java should reach for `spacy`.
 
 ---
 
@@ -71,7 +71,7 @@ cfg = Config(seeds={
 
 No `SeedDictionary` class, no `Dimension` dataclass, no registry. Researchers working on domain-agnostic concepts should not have to import and subclass anything to experiment with a new seed set. Editing a dict in a notebook is the minimum possible friction.
 
-The 2021 paper's 5-dim culture dictionary is shipped as a named example via `load_example_seeds("culture_2021")`. It is opt-in and clearly tagged as a reproduction artifact, never the default. The package stays useful across both that paper and the 2026 follow-up's 6-type taxonomy because the seed shape is the same plain dict.
+The 2021 paper's 5-dim culture dictionary is shipped as a named example via `load_example_seeds("culture_2021")`, clearly tagged as a reproduction artifact a user opts into. Because seeds are just a plain dict, the same package works for any construct you define.
 
 ---
 

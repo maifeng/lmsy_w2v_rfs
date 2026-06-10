@@ -85,7 +85,7 @@ runs/my_experiment/
 │   └── pass2.txt                         after bigram + trigram Phrases
 ├── models/
 │   ├── w2v.mod                           trained Word2Vec (gensim format)
-│   └── phrases_pass1.pkl / pass2.pkl     fitted Phrases models
+│   └── phrases_pass1.mod / pass2.mod     fitted Phrases models
 └── outputs/
     ├── expanded_dict.csv                 per-dimension ranked word lists
     ├── scores_TF.csv                     document-level TF scores
@@ -127,7 +127,7 @@ this file match the current Config." If you change `w2v_epochs` from 20 to
 40 and rerun, `train` will skip because `w2v.mod` exists. Delete the model
 file (or pass `force=True` to `train` or `run`) to pick up config changes.
 
-The dumped `config.json` in `work_dir/` is an audit trail, not a cache key.
+The dumped `config.json` in `work_dir/` is an audit trail; the pipeline never reads it back to decide what to rerun.
 
 ## Gotcha: partial writes
 

@@ -241,9 +241,10 @@ A document's score on a concept is the sum of TF-IDF weights for every dictionar
 
 The `+SIMWEIGHT` variants additionally weight each word by its **rank** in the
 similarity-ordered dictionary (`1/ln(2 + rank)`), so words nearer the seed
-centroid count more and peripheral expansion words count less. This rank-based
-similarity weighting is the scheme several studies building on the method have
-adopted. It is rank-based, not a function of the raw cosine-similarity value.
+centroid count more and peripheral expansion words count less. The weight depends
+on rank alone — the cosine similarities enter only by setting that ranking. This
+rank-based similarity weighting is the scheme several studies building on the
+method have adopted.
 
 ```python
 p.score(methods=("TFIDF",))
@@ -310,7 +311,7 @@ Config(
     w2v_extra={},                      # extra kwargs -> gensim Word2Vec (e.g. {"negative": 10, "hs": 0})
 
     # Step 3
-    n_words_dim=500,                   # paper's threshold for the dictionary cutoff
+    n_words_dim=500,                   # package default: top-k expanded words per dimension
     dict_restrict_vocab=None,
     min_similarity=0.0,
 

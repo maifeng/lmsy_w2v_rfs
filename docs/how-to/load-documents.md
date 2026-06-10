@@ -163,7 +163,7 @@ p.run()
 ```
 
 If you only have the texts file and no IDs file, the factory auto-assigns
-1-based line numbers as IDs.
+0-based line indices as IDs.
 
 ---
 

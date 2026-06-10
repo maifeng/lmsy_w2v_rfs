@@ -138,7 +138,7 @@ cfg = Config(
 )
 ```
 
-The packaged `"finance"` list is an earnings-call example, not a default.
+The packaged `"finance"` list is an earnings-call example; pass it explicitly to use it.
 Pass a path to your own list for any other domain.
 
 ## Gotchas
