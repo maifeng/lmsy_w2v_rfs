@@ -25,9 +25,8 @@
 #
 # **Paper:** https://doi.org/10.1093/rfs/hhaa079
 #
-# **Demo corpus**: 2,000 Glassdoor "pros" reviews (sampled from the RFS
-# 2026 validation dataset). The same corpus is used across all three
-# workshop notebooks for comparability.
+# **Demo corpus**: 2,000 Glassdoor "pros" reviews, a small public sample
+# bundled with the package so this quickstart runs with no data setup.
 
 # %% [markdown]
 # ## 1. Install and download the corpus

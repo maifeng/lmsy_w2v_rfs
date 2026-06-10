@@ -53,3 +53,7 @@ runs/
 .idea/
 .vscode/
 *.swp
+
+# Internal AI assistant instructions — never publish
+CLAUDE.md
+.claude/
