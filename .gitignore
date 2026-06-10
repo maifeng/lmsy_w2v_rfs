@@ -49,6 +49,7 @@ runs/
 
 # macOS / editors
 .DS_Store
+._*
 .idea/
 .vscode/
 *.swp

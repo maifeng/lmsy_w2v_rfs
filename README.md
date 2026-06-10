@@ -1,4 +1,4 @@
-# `lmsy_w2v_rfs` — Word2Vec dictionary expansion and document scoring
+# `lmsy_w2v_rfs`: Word2Vec dictionary expansion and document scoring
 
 [![Open in Colab](https://img.shields.io/badge/Colab-quickstart-orange?logo=googlecolab&logoColor=white)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb)
 [![PyPI version](https://img.shields.io/pypi/v/lmsy_w2v_rfs.svg)](https://pypi.org/project/lmsy_w2v_rfs/)
@@ -9,12 +9,11 @@ introduced in Li, Mai, Shen, and Yan (2021). A researcher specifies a small set 
 seed words for each concept to be measured; the package trains Word2Vec on the
 target corpus, expands each concept's seeds into a corpus-specific dictionary of
 related words and multi-word phrases, and produces document-level scores by
-TF-IDF–weighted dictionary matching. The method is theory-agnostic: any concept
-expressible as a list of seed words can be measured, in any corpus.
+TF-IDF–weighted dictionary matching. 
 
 ## Citation
 
-If you use this package in your research, please cite the paper the method is based on:
+If you find the package useful, please cite the paper the method is based on:
 
 > Li, Kai, Feng Mai, Rui Shen, and Xinyan Yan (2021), "Measuring Corporate Culture
 > Using Machine Learning," *Review of Financial Studies* 34(7):3265–3315,
@@ -34,7 +33,7 @@ If you use this package in your research, please cite the paper the method is ba
 ```
 </details>
 
-This package is an independent, generalized reimplementation. The authors' original
+This package is a general update of the paper's method. The original
 code for the paper is at
 [MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning](https://github.com/MS20190155/Measuring-Corporate-Culture-Using-Machine-Learning).
 
@@ -47,14 +46,14 @@ pip install -U lmsy_w2v_rfs
 ```
 
 The base install runs out of the box with `preprocessor="none"` (whitespace
-tokenization). For richer Phase 1 parsing — lemmatization, named-entity masking,
-and dependency-based multi-word expressions — install an optional backend:
+tokenization). For richer Phase 1 parsing (lemmatization, named-entity masking,
+and dependency-based multi-word expressions) install an optional backend:
 
 ```bash
 pip install -U "lmsy_w2v_rfs[spacy]" && python -m spacy download en_core_web_sm
 ```
 
-For exact reproduction of the 2021 paper, use the CoreNLP backend (needs Java and a
+For reproduction of the 2021 paper, use the CoreNLP backend (slower; needs Java and a
 one-time ~1 GB download):
 
 ```bash
@@ -66,7 +65,7 @@ lmsy-w2v-rfs download-corenlp
 
 ## Quickstart
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb) &nbsp; **Try it now** — no install, runs on a bundled 2,000-review demo corpus.
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/maifeng/lmsy_w2v_rfs/blob/main/notebooks/01_quickstart_colab.ipynb) &nbsp; **Try it now**, no install, runs on a bundled 2,000-review demo corpus.
 
 Researchers usually start from a table of documents. Point the pipeline at a CSV,
 declare a few seed words per concept, and run:
