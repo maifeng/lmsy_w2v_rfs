@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import re
 
+from .base import Preprocessor
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
 
 
-class NoOpPreprocessor:
+class NoOpPreprocessor(Preprocessor):
     """Trivial preprocessor: split on sentence-ending punctuation, lowercase.
 
     Fastest possible path. Useful for quick iteration, for tests, and for

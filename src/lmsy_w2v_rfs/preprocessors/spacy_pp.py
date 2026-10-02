@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -37,7 +37,7 @@ class SpacyPreprocessor:
         model_name: Name of the loaded model.
     """
 
-    def __init__(self, config: "Config") -> None:
+    def __init__(self, config: Config) -> None:
         """Load the spaCy model named in ``config.spacy_model``.
 
         Args:
@@ -114,7 +114,15 @@ class SpacyPreprocessor:
                 out.append(self._sentence_tokens(sent))
             yield out
 
-    def _sentence_tokens(self, sent) -> list[str]:
+    def _sentence_tokens(self, sent: Any) -> list[str]:
+        """Join adjacent non-entity MWEs and emit one placeholder per entity.
+
+        Args:
+            sent: Sentence annotation supplied by the parser backend.
+
+        Returns:
+            Lowercased lexical tokens and entity placeholders.
+        """
         # Mark NER tokens: {token_index: (entity_type, is_start)}
         ner_at: dict[int, tuple[str, bool]] = {}
         for ent in sent.ents:
@@ -148,10 +156,10 @@ class SpacyPreprocessor:
             # concatenate with the next token.
             parts = [tok.lemma_.lower()]
             while tok.i in mwe_after and i + 1 < len(sent_tokens):
+                if sent_tokens[i + 1].i in ner_at:
+                    break
                 i += 1
                 tok = sent_tokens[i]
-                if tok.i in ner_at:  # do not cross an NER boundary
-                    break
                 parts.append(tok.lemma_.lower())
             joined = "_".join(parts)
             if joined.strip():

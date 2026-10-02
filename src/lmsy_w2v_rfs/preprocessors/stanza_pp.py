@@ -14,13 +14,15 @@ paper-faithful syntactic MWE coverage.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # Imported at module top (not lazily inside __init__) so that selecting this
 # backend without the [stanza] extra — or on an old-glibc Linux box where the
 # torch/stanza wheels cannot load — raises at the `from .stanza_pp import ...`
 # in build_preprocessor, where it is caught and turned into a helpful message.
 import stanza
+
+from .base import Preprocessor
 
 if TYPE_CHECKING:
     from ..config import Config
@@ -32,14 +34,14 @@ log = logging.getLogger(__name__)
 _MWE_DEPS = {"fixed", "flat", "compound"}
 
 
-class StanzaPreprocessor:
+class StanzaPreprocessor(Preprocessor):
     """stanza.Pipeline-based preprocessor.
 
     Attributes:
         nlp: Loaded stanza Pipeline.
     """
 
-    def __init__(self, config: "Config") -> None:
+    def __init__(self, config: Config) -> None:
         """Load the stanza pipeline.
 
         Args:
@@ -75,7 +77,15 @@ class StanzaPreprocessor:
             out.append(self._sentence_tokens(s))
         return out
 
-    def _sentence_tokens(self, sent) -> list[str]:
+    def _sentence_tokens(self, sent: Any) -> list[str]:
+        """Join adjacent non-entity MWEs and emit one placeholder per entity.
+
+        Args:
+            sent: Sentence annotation supplied by the parser backend.
+
+        Returns:
+            Lowercased lexical tokens and entity placeholders.
+        """
         # stanza.word.id is 1-based within the sentence.
         # sent.ents contains Span objects with .tokens; each token has .id.
 
@@ -85,9 +95,6 @@ class StanzaPreprocessor:
             for j, tok in enumerate(ent.tokens):
                 tid = tok.id[0] if isinstance(tok.id, tuple) else tok.id
                 ner_at[tid] = (ent.type, j == 0)
-
-        # Build id -> word map for fast lookup.
-        by_id = {w.id: w for w in sent.words}
 
         # MWE join pairs. Only join adjacent pairs (the paper did the same).
         mwe_after: set[int] = set()
@@ -114,10 +121,10 @@ class StanzaPreprocessor:
             parts = [(w.lemma or w.text).lower()]
             # Absorb an adjacent MWE-linked token, but not across NER boundaries.
             while w.id in mwe_after and i + 1 < len(words_sorted):
+                if words_sorted[i + 1].id in ner_at:
+                    break
                 i += 1
                 w = words_sorted[i]
-                if w.id in ner_at:
-                    break
                 parts.append((w.lemma or w.text).lower())
             joined = "_".join(parts)
             if joined.strip():

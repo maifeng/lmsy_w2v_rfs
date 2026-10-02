@@ -65,7 +65,7 @@ _IMPORT_ERRORS = {
 }
 
 
-def build_preprocessor(config: "Config") -> Preprocessor:
+def build_preprocessor(config: Config) -> Preprocessor:
     """Instantiate the preprocessor named in ``config.preprocessor``.
 
     Args:

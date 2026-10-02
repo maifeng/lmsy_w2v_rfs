@@ -13,13 +13,12 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .base import apply_mwe_list, load_mwe_list
-
+from .base import Preprocessor, apply_mwe_list, load_mwe_list
 
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
 
 
-class StaticMWEPreprocessor:
+class StaticMWEPreprocessor(Preprocessor):
     """Whitespace tokenize + NLTK MWE concatenation.
 
     Attributes:

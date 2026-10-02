@@ -18,7 +18,7 @@ import logging
 import os
 import pathlib
 from collections.abc import Iterable, Iterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 # Imported at module top so a missing [corenlp] extra (or an old-glibc box
 # where the stanza wheel cannot load) raises at import time in
@@ -47,7 +47,7 @@ class CoreNLPPreprocessor:
     guarantee clean shutdown.
     """
 
-    def __init__(self, config: "Config") -> None:
+    def __init__(self, config: Config) -> None:
         """Stand up the CoreNLP client.
 
         Args:
@@ -94,6 +94,7 @@ class CoreNLPPreprocessor:
                 "tokenize", "ssplit", "pos", "lemma", "ner",
                 "entitymentions", "depparse",
             ],
+            endpoint=f"http://localhost:{config.corenlp_port}",
             memory=config.corenlp_memory,
             threads=config.n_cores,
             timeout=config.corenlp_timeout_ms,
@@ -104,10 +105,15 @@ class CoreNLPPreprocessor:
         self._client.start()
         log.info("CoreNLPPreprocessor ready")
 
-    def __enter__(self) -> "CoreNLPPreprocessor":
+    def __enter__(self) -> CoreNLPPreprocessor:
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *args: object) -> None:
+        """Close the client when leaving its context.
+
+        Args:
+            *args: Exception details supplied by the context manager protocol.
+        """
         self.close()
 
     def close(self) -> None:
@@ -163,7 +169,15 @@ class CoreNLPPreprocessor:
                     out.append(self._sentence_tokens(s))
                 yield out
 
-    def _sentence_tokens(self, sent) -> list[str]:
+    def _sentence_tokens(self, sent: Any) -> list[str]:
+        """Join adjacent non-entity MWEs and emit one placeholder per entity.
+
+        Args:
+            sent: Sentence annotation supplied by the parser backend.
+
+        Returns:
+            Lowercased lexical tokens and entity placeholders.
+        """
         if not sent.token:
             return []
         base = sent.token[0].tokenBeginIndex
@@ -199,11 +213,11 @@ class CoreNLPPreprocessor:
                 continue
             parts = [(t.lemma or t.word).lower()]
             while idx in mwe_after and i + 1 < len(tokens):
+                if tokens[i + 1].tokenBeginIndex in ner_at:
+                    break
                 i += 1
                 t = tokens[i]
                 idx = t.tokenBeginIndex
-                if idx in ner_at:
-                    break
                 parts.append((t.lemma or t.word).lower())
             joined = "_".join(parts)
             if joined.strip():
