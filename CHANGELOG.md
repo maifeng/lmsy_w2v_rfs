@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-10-02
+
+### Fixed
+
+- Preserve complete document IDs containing underscores when joining sentences.
+  Cached score reloads and default CSV loading preserve string IDs, including
+  leading zeros and literal NA-like identifiers.
+- Expand dictionaries without reordering the caller's embedding model or
+  corrupting cached vector norms. Frequency restrictions work with unsorted
+  vocabularies and select at least one entry for a positive fraction.
+- Ignore nondictionary tokens in SIMWEIGHT contribution diagnostics. Invalidate
+  contribution caches after dictionary edits and reloads.
+- Save dictionary CSVs atomically and retain the previous in-memory dictionary
+  if saving a curation edit fails. Preserve literal dictionary tokens on CSV reload.
+- Preserve entity placeholders at MWE boundaries in spaCy, Stanza, and CoreNLP.
+  Forward the configured CoreNLP port to its client.
+- Accept string phrase-model paths and reject phrase input/output paths that
+  refer to the same file before opening the output.
+- Serialize Path-valued configuration settings, reject misaligned sentence/ID
+  files and backend result counts, and validate seed-word lists consistently.
+- Treat missing CSV/DataFrame text and JSONL null text as blank input, which is
+  skipped during parsing. Reject missing or blank explicit document IDs.
+
+### Documentation
+
+- Clarify raw document scores, per-100-token firm-year normalization, rank
+  weights, regularized whitening, and the return value of `Pipeline.score`.
+- Replace automatic downstream-rerun claims with explicit forcing instructions
+  that explain when manually curated dictionaries are replaced.
+- Provide a preprocessing-only sharding workflow followed by shared global
+  phrase training, embedding training, dictionary expansion, and IDF scoring.
+- Correct copyable seed/configuration examples and backend capability claims;
+  describe scoring memory use and the limits of benchmark and replication claims.
+
+### Added
+
+- Regression tests for the repaired research workflows and failure paths.
+- Python 3.10, 3.11, and 3.12 test/type-check CI and the packaged `py.typed` marker.
+
+### Compatibility
+
+- Historical all-dimension deduplication, seed-vector averaging conventions,
+  raw document scores, and stage-by-stage cache reuse remain unchanged.
+- Missing text is excluded from the scoring corpus rather than becoming a
+  literal `nan` or `None` document. Invalid seed elements now raise `ValueError`.
+
 ## [0.1.5] - 2026-06-07
 
 ### Changed
@@ -196,6 +242,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   optional `[corenlp]` extra, 7 test files, MkDocs site scaffold.
   (`1019bfb`)
 
+[0.1.6]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.5...v0.1.6
+[0.1.5]: https://github.com/maifeng/lmsy_w2v_rfs/releases/tag/v0.1.5
 [0.1.4]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/maifeng/lmsy_w2v_rfs/compare/v0.1.1...v0.1.2

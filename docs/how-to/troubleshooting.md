@@ -4,6 +4,21 @@ Common errors encountered when running `lmsy_w2v_rfs` and the exact resolution f
 
 ---
 
+## Gensim fails to build on Python 3.14
+
+The package is tested on Python 3.10, 3.11, and 3.12. A Python 3.14 installation
+on macOS failed while compiling Gensim 4.4.0. If you encounter that build error,
+create a Python 3.12 environment and install the package there:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U lmsy_w2v_rfs
+```
+
+This is a tested fallback for that dependency combination; it does not establish
+compatibility across every Python 3.14 platform.
+
 ## `ImportError`: a preprocessor backend is not installed
 
 **Symptoms:** selecting `preprocessor="stanza"` (or `spacy`/`corenlp`) without its

@@ -45,6 +45,9 @@ code for the paper is at
 pip install -U lmsy_w2v_rfs
 ```
 
+Python 3.10, 3.11, and 3.12 are tested. If Gensim fails to build on Python 3.14,
+use a Python 3.12 environment; that dependency combination has not been validated.
+
 The base install runs out of the box with `preprocessor="none"` (whitespace
 tokenization). For richer Phase 1 parsing (lemmatization, named-entity masking,
 and dependency-based multi-word expressions) install an optional backend:
