@@ -60,7 +60,6 @@ innovation: innovation innovate creative pioneer breakthrough
 Or JSON, if you prefer structured formats:
 
 ```json
-// my_seeds.json
 {
   "integrity":  ["integrity", "ethic", "honest", "accountable", "trust"],
   "quality":    ["quality", "customer", "dedicated", "reliable"],
@@ -85,7 +84,7 @@ The command will:
 2. Tokenize each transcript with the default `none` backend (whitespace +
    lowercase). Add `--preprocessor spacy` or `--preprocessor corenlp` for
    lemmatization, named-entity masking, and parser-based multi-word expressions.
-3. Learn bigrams and trigrams with gensim `Phrases`.
+3. Run two gensim `Phrases` joining passes; the second can form trigrams or longer phrases.
 4. Train a 300-dim Word2Vec model (CBOW) on the corpus.
 5. Expand each seed list to 500 words via nearest-neighbor search.
 6. Score every document on each dimension under TF, TFIDF, and WFIDF.
@@ -120,7 +119,7 @@ transparent,reliable,inventive
 ```
 
 Each column is one dimension; rows are words ranked by similarity to the
-seed mean. Seeds appear at the top; their nearest neighbors follow.
+seed mean. Seeds and neighbors share that ordering; seeds need not appear first.
 
 Open the scores CSV:
 
@@ -136,7 +135,7 @@ WFC_2024Q1,4.1,73.6,18.2,13980
 
 Every stage is idempotent. Run the same command again and the pipeline
 skips completed stages. To redo a specific stage, delete its output and
-rerun; to redo everything, pass `--force`:
+rerun. Existing downstream artifacts are still reused, so explicitly force those stages when rebuilding them. To redo everything, pass `--force` (this replaces any curated dictionary):
 
 ```bash
 lmsy-w2v-rfs run --input transcripts.csv --input-format csv \

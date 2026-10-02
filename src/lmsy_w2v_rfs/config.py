@@ -146,7 +146,8 @@ class Config:
             this size to cap peak memory on large corpora; 0 processes all.
         n_cores: Parallel workers for parsing and training.
         use_gensim_phrases: Whether to run gensim Phrases.
-        phrase_passes: Number of phrase passes (1 bigram, 2 bigram+trigram).
+        phrase_passes: Number of successive joining passes. Later passes
+            can form trigrams and longer expressions from existing phrases.
         phrase_threshold: gensim Phrases score threshold.
         phrase_min_count: Minimum bigram count.
         w2v_dim: Word2Vec vector dimension.
@@ -165,7 +166,8 @@ class Config:
         n_words_dim: Top-k expanded words per dimension.
         dict_restrict_vocab: Restrict expansion to the top fraction of vocab.
         min_similarity: Discard expansion candidates below this cosine.
-        tfidf_normalize: L2-normalize the tf-idf vector per document.
+        tfidf_normalize: L2-normalize the dimension-score vector per document,
+            for every requested scoring method.
         zca_whiten: Apply ZCA whitening to the dimension columns.
         zca_epsilon: Numerical stabilizer for ZCA.
         random_state: Seed for Word2Vec.

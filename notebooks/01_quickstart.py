@@ -58,7 +58,7 @@ seeds = {
 }
 
 # %% [markdown]
-# **Reproducing the 2021 paper exactly?** The original 47-seed dictionary
+# **Using the paper's seed dictionary?** The original 47-seed dictionary
 # is shipped as a named example:
 #
 # ```python
@@ -92,10 +92,10 @@ corpus[["review_id", "text"]].head(3)
 # %% [markdown]
 # ## 4. Configure the pipeline
 #
-# `preprocessor="none"` (the default) does no parsing — it splits on
+# `preprocessor="none"` (the default) does no parsing; it splits on
 # whitespace and lowercases, so it needs no extra dependencies and runs
 # anywhere. The gensim Phrases pass still learns corpus-specific bigrams and
-# trigrams. For lemmatization and named-entity masking, switch to a parser
+# longer phrases. For lemmatization and named-entity masking, switch to a parser
 # backend; section 12 shows how, using spaCy (Python-only, runs on Colab).
 #
 # With 2,000 short reviews we use 100-dim vectors and expand to 50 words
@@ -121,8 +121,8 @@ cfg
 # %% [markdown]
 # ## 5. Run the pipeline
 #
-# `Pipeline.run()` executes five stages: parse, clean, phrase, train,
-# expand+score. On 2,000 reviews this takes 15-30 seconds on a laptop or
+# `Pipeline.run()` executes six stages: parse, clean, phrase, train,
+# expand_dictionary, and score. On 2,000 reviews this takes 15-30 seconds on a laptop or
 # Colab CPU.
 
 # %%
@@ -157,8 +157,9 @@ p.dictionary_preview(top_k=10)
 # - **Programmatic**: `p.edit_dictionary(remove={...}, add={...})`
 # - **Spreadsheet**: edit `p.dict_path` in Excel or any text editor, save, `p.reload_dictionary()`.
 #
-# Both update the in-memory dictionary and the on-disk CSV in one call.
-# Cached scores are dropped automatically; rerun `p.score()` afterward.
+# `edit_dictionary` saves the CSV before replacing the in-memory dictionary.
+# For external edits, save the CSV first, then call `reload_dictionary`.
+# Both clear cached scores and contributions; rerun `p.score()` afterward.
 
 # %% [markdown]
 # To decide *what* to curate, look at which words actually drive each
@@ -219,7 +220,7 @@ p.show_dictionary(top_k=10)
 # %% [markdown]
 # ## 8. Inspect scores
 #
-# We score with `TFIDF` — the measure used in the paper: each dictionary
+# We score with `TFIDF`, the measure used in the paper: each dictionary
 # word counts as `tf * log(N/df)`, so distinctive words count more than
 # generic ones. Other methods are available: `TF` (raw counts), `WFIDF`
 # (sublinear `tf`), and `TFIDF+SIMWEIGHT` / `WFIDF+SIMWEIGHT` (additionally
@@ -263,8 +264,9 @@ for dim in cfg.dims:
 # to praise innovation too. If your next step is a regression that uses
 # the dimension scores as regressors, that covariance becomes
 # multicollinearity. ZCA (zero-phase component analysis) whitening
-# linearly transforms the dimension columns so their covariance becomes
-# the identity (decorrelated, unit variance). Column names are
+# linearly transforms the dimension columns so their covariance approaches
+# the identity when the data have full rank. Positive epsilon regularizes the
+# transform, and constant dimensions cannot acquire unit variance. Column names are
 # preserved: `integrity` still means integrity, not PC1.
 
 # %%
@@ -278,7 +280,7 @@ cov_before = np.cov(scores[dim_cols].to_numpy(), rowvar=False)
 print(pd.DataFrame(cov_before.round(3), index=dim_cols, columns=dim_cols))
 
 scores_white = zca_whiten(scores, dims=dim_cols)
-print("\nCovariance AFTER ZCA whitening (identity = decorrelated):")
+print("\nCovariance AFTER ZCA whitening (near identity for full-rank input):")
 cov_after = np.cov(scores_white[dim_cols].to_numpy(), rowvar=False)
 print(pd.DataFrame(cov_after.round(3), index=dim_cols, columns=dim_cols))
 
@@ -306,10 +308,10 @@ p_custom.score_df("TFIDF").head()
 # ## 12. Switch the parser: spaCy (lemmatization + named-entity masking)
 #
 # Everything above used the default `none` backend (whitespace + lowercase).
-# To lemmatize (so `integrities` matches the seed `integrity`) and mask
+# To lemmatize (so `employees` maps to the seed `employee`) and mask
 # entities like firm names, switch to a parser. spaCy is Python-only and
-# runs on Colab — no Java needed. Install the extra and a small model, then
-# set `preprocessor="spacy"`. (For exact paper reproduction use
+# runs on Colab, no Java needed. Install the extra and a small model, then
+# set `preprocessor="spacy"`. (To follow the paper's parsing approach use
 # `preprocessor="corenlp"`, which needs Java and a ~1 GB download.)
 
 # %%

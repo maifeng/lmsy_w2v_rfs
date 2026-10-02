@@ -5,9 +5,7 @@ The scoring kernel turns a doc-level corpus and an expanded
 methods are supported: `TF` (raw counts), `TFIDF` (`tf * log(N/df)`), and
 `WFIDF` (`(1 + log tf) * log(N/df)`). Each can be combined with the
 `similarity_weights` kernel to produce `TFIDF+SIMWEIGHT` and `WFIDF+SIMWEIGHT`.
-The streaming design avoids materializing the full corpus in memory: document
-frequencies and per-document text are built in a single pass over the sentence
-file.
+The lower-level iterator reads the sentence file incrementally. `Pipeline.score` and `Pipeline.word_contributions` materialize document text in a list; `score_documents` also accumulates output rows.
 
 `Pipeline.score` chains these primitives together; the same functions are
 exported for users who want to score a corpus directly.
@@ -65,8 +63,7 @@ by document length (per 100 tokens), and averages within each firm-year cell.
 
 ## zca_whiten
 
-Applies ZCA whitening to a matrix of document-level scores so that each
-dimension has unit variance and the dimensions are decorrelated. Useful
+Applies ZCA whitening to a matrix of document-level scores to reduce covariance between dimensions. Positive epsilon regularizes the transform, so identity covariance is approximate and cannot be attained for constant or rank-deficient inputs. Useful
 when the seed dimensions overlap in embedding space.
 
 ::: lmsy_w2v_rfs.zca_whiten

@@ -3,7 +3,7 @@
 `Config` is a frozen dataclass that holds every hyperparameter the pipeline
 needs. It composes the two construction phases: Phase 1 (parser-based MWE
 joining and NER masking, with an optional static MWE post-pass) and Phase 2
-(gensim `Phrases` bigram / trigram learning). Field defaults mirror the RFS
+(gensim `Phrases` repeated statistical phrase joining). Field defaults mirror the RFS
 2021 replication repo's `global_options.py` where applicable. Use `Config.with_(...)`
 to copy-and-override individual fields without rebuilding the whole object.
 

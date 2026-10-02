@@ -292,13 +292,12 @@ def zca_whiten(
 ) -> pd.DataFrame:
     """Apply ZCA whitening to the dimension columns of a scores DataFrame.
 
-    ZCA (zero-phase component analysis) whitening is a linear transform that
-    decorrelates the columns (makes the covariance the identity) while
-    staying as close as possible to the original axes. Unlike PCA whitening,
-    it does not rotate the data into a new basis, so after whitening the
-    column named ``integrity`` still measures something close to integrity
-    (not "principal component 1"). This matters when downstream analysis
-    interprets each dimension by name.
+    ZCA (zero-phase component analysis) uses a symmetric linear transform
+    aligned with the original coordinate axes. Adding ``epsilon`` to each
+    covariance eigenvalue regularizes the transform, so output covariance
+    is approximately the identity for full-rank inputs. Constant or
+    rank-deficient directions cannot attain unit variance. Each output
+    dimension is a linear combination of the input dimensions.
 
     This is a post-scoring transform. Input columns retain their names;
     output values are the whitened coordinates. Non-dimension columns
@@ -316,7 +315,7 @@ def zca_whiten(
         scores: DataFrame from :func:`score_documents`, with one column per
             dimension plus ``Doc_ID`` and ``document_length``.
         dims: List of dimension column names to whiten.
-        epsilon: Eigenvalue floor for numerical stability. Raise if the
+        epsilon: Additive eigenvalue regularizer for numerical stability. Raise if the
             covariance is near-singular (small corpora, highly correlated
             dimensions).
 

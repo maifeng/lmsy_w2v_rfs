@@ -17,7 +17,7 @@ All factories produce the same internal representation: `texts` is a
 sentences, newlines, headers, etc.), and `doc_ids` is a matching
 `list[str]` of identifiers for later joins.
 
-Every `Pipeline` needs a `config` — the seed dictionary is required and has
+Every `Pipeline` needs a `config`, the seed dictionary is required and has
 no default. The examples below reuse this one:
 
 ```python
@@ -194,6 +194,12 @@ If your records do not have an explicit ID field, pass `id_key=None` and
 
 ---
 
+## Missing values and identifiers
+
+DataFrame/CSV missing text and JSONL null text become blank documents, which parsing skips. Empty documents therefore do not contribute to the scored corpus or its IDF document count. Explicit ID columns/keys must contain nonmissing, nonblank IDs; invalid IDs raise `ValueError`.
+
+CSV loading preserves ID spelling, including leading zeros and literal NA-like strings, by default. An explicit pandas `dtype` or converter for the ID column overrides that default. Score reloads preserve IDs as strings. Use `id_col=None` (or CLI `--id-col ""`) when you want generated IDs instead.
+
 ## What counts as "one document"?
 
 Whatever you put in one string. The pipeline's preprocessor handles
@@ -216,11 +222,9 @@ All factories load the full corpus into RAM as a Python list. Earnings-call
 sample: 1,393 documents at ~30 KB each = ~40 MB. Fine on any laptop. If
 your corpus is millions of long documents:
 
-- Shard into 10k-document files.
-- Run the pipeline once per shard with a shared `seeds` dictionary.
-- Concatenate the resulting scores DataFrames across shards.
-- Word2Vec training needs the full corpus once; use a sharded training run
-  only after preprocessing all shards.
+- Shard raw input for preprocessing, keeping globally unique document IDs.
+- Combine cleaned sentence files and their matching sentence-ID files in the same order.
+- Fit phrase models and Word2Vec once on the combined corpus, expand one dictionary, and compute document frequencies on that complete scoring corpus.
+- Score against that shared dictionary and global IDF table. Independently running each shard and concatenating its scores fits different dictionaries and IDF scales.
 
-For small to mid-sized corpora (thousands to tens of thousands of documents),
-memory is rarely the issue.
+See [Run on HPC](run-on-hpc.md) for a preprocessing-only array job and a global training/scoring job. The final Pipeline scoring stage still materializes the combined document corpus in memory.

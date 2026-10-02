@@ -15,7 +15,7 @@ Reads documents from `--input`, parses + cleans + trains Word2Vec + expands
 the seed dictionary + scores every document on every dimension, and writes
 all artifacts under `--out`.
 
-Exit code 0 on success. 1 on argparse usage errors. Python exceptions bubble
+Exit code 0 on success. 2 on argparse usage errors. Python exceptions bubble
 up with their native traceback and non-zero code.
 
 ### Input flags
@@ -51,14 +51,14 @@ up with their native traceback and non-zero code.
 | `--preprocessor` | choice | `none` | `none` (default, no extra deps) / `spacy` (lemmas+NER, no Java) / `corenlp` (paper-faithful, needs Java) / `stanza` (Python-native) / `static` (list-only). |
 | `--mwe-list` | str | `none` | Optional static MWE list post-pass. `none` skips. `finance` uses the packaged earnings-call example. Path loads a custom list. |
 | `--spacy-model` | str | `en_core_web_sm` | spaCy model name when `--preprocessor=spacy`. `en_core_web_trf` is the best-NER slower option. |
-| `--n-cores` | int | `4` | JVM threads for CoreNLP, `n_process` for spaCy / stanza. 4 is safe on an 8-core laptop; 8 on a workstation. |
+| `--n-cores` | int | `4` | JVM threads for CoreNLP, `n_process` for spaCy; stanza parsing is serial (this setting still controls Word2Vec workers). 4 is safe on an 8-core laptop; 8 on a workstation. |
 
 ### Phase 2 (gensim Phrases) flags
 
 | Flag | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `--no-phrases` | flag | off | Skip the gensim `Phrases` pass entirely. |
-| `--phrase-passes` | int | `2` | 1 = bigram only. 2 = bigram then trigram. |
+| `--phrase-passes` | int | `2` | Number of joining passes. Later passes can produce phrases longer than trigrams. |
 | `--phrase-min-count` | int | `10` | Minimum bigram count. Lower on small corpora. |
 | `--phrase-threshold` | float | `10.0` | gensim `Phrases` score threshold. |
 
@@ -93,7 +93,7 @@ runs/out/
 │   └── sentences.txt        # stopwords and punctuation dropped
 ├── corpora/                 # only if gensim Phrases is enabled
 │   ├── pass1.txt            # bigram-joined sentences
-│   └── pass2.txt            # trigram-joined sentences
+│   └── pass2.txt            # second-pass phrase-joined sentences
 ├── models/
 │   ├── phrases_pass1.mod    # saved gensim Phrases models
 │   ├── phrases_pass2.mod

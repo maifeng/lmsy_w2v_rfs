@@ -1,6 +1,6 @@
 # Two-phase preprocessing
 
-`lmsy_w2v_rfs` can construct multi-word expressions (MWEs) in two phases before Word2Vec sees a single token. Each phase catches a different class of MWE. Phase 2 (statistical) always runs; Phase 1a (parser-based) runs only when you select a parser backend — the default `preprocessor="none"` skips it.
+`lmsy_w2v_rfs` can construct multi-word expressions (MWEs) in two phases before Word2Vec sees a single token. Each phase catches a different class of MWE. Phase 2 (statistical) runs by default and can be disabled with `use_gensim_phrases=False`; Phase 1a (parser-based) runs only when you select a parser backend, the default `preprocessor="none"` skips it.
 
 ---
 
@@ -11,7 +11,7 @@ flowchart LR
     RAW[Raw documents] --> P1A["Phase 1a: parser-based\nlemmatize, NER mask,\nUD MWE join"]
     P1A --> P1B["Phase 1b (optional):\nstatic MWE list\npost-pass"]
     P1B --> CLEAN["Clean:\nlowercase, drop punctuation,\ndrop SRAF stopwords"]
-    CLEAN --> P2["Phase 2: gensim Phrases\nbigram pass, trigram pass\n(statistical)"]
+    CLEAN --> P2["Phase 2: gensim Phrases\nfirst and second joining passes\n(statistical)"]
     P2 --> W2V[Word2Vec input]
 
     style P1A fill:#e8f4f8,stroke:#2c7a96
@@ -29,10 +29,10 @@ The configured parser tokenizes, lemmatizes, tags named entities, and joins toke
 | `"none"` (default) | nothing | Whitespace tokenize + lowercase; zero dependencies, runs out of the box |
 | `"static"` | `nltk` only | Deterministic curated-list pass; no parser |
 | `"spacy"` | `[spacy]` extra and a model | Fastest parser; best NER; 0% `fixed` or `compound:prt` recall |
-| `"corenlp"` | `[corenlp]` extra and Java 8+ | Paper-exact; 76% syntactic MWE recall; best JVM thread scaling |
+| `"corenlp"` | `[corenlp]` extra and Java 8+ | Follows the paper's parsing approach; reported 76% syntactic MWE recall; best JVM thread scaling |
 | `"stanza"` | `[stanza]` extra | Python-native; 57% syntactic MWE recall; slowest on CPU |
 
-The default, `"none"`, does no parsing — it just splits on whitespace and lowercases. It is the zero-friction starting point and is the right choice when your input is already tokenized, or when you simply want to try the package; Phase 2 and Word2Vec still produce useful dictionaries. The parser backends add value when you want their Phase 1a signals: lemmatization (so the seed `integrity` matches `integrities`/`integrated`) and NER masking (so firm names like `Apple` are replaced with `[NER:TYPE]` placeholders and cannot enter a dictionary). For paper-faithful Phase 1a, choose `"corenlp"`; for a fast Java-free parser, choose `"spacy"`.
+The default, `"none"`, does no parsing, it just splits on whitespace and lowercases. It is the zero-friction starting point and is the right choice when your input is already tokenized, or when you simply want to try the package; Phase 2 and Word2Vec still produce useful dictionaries. The parser backends add value when you want their Phase 1a signals: lemmatization (so `employees` maps to the seed `employee`) and NER masking (so firm names like `Apple` are replaced with `[NER:TYPE]` placeholders and cannot enter a dictionary). For paper-faithful Phase 1a, choose `"corenlp"`; for a fast Java-free parser, choose `"spacy"`.
 
 ## Phase 1b: optional static MWE list
 
@@ -40,7 +40,7 @@ After the main preprocessor runs, a curated MWE list (`Config.mwe_list`) can joi
 
 ## Phase 2: statistical, gensim Phrases
 
-After cleaning, gensim's `Phrases` runs one bigram pass and (by default) one trigram pass on the corpus itself. It learns high-frequency co-occurrences that no parser will flag, because they are collocations rather than grammatical units.
+After cleaning, gensim's `Phrases` runs one bigram pass and (by default) a second joining pass that can produce trigrams and longer phrases on the corpus itself. It learns high-frequency co-occurrences that no parser will flag, because they are collocations rather than grammatical units.
 
 ---
 

@@ -35,7 +35,7 @@ N = int(os.environ.get("SLURM_CPUS_PER_TASK",
 cfg = Config(
     seeds=seeds,
     preprocessor="corenlp",
-    n_cores=N,           # JVM threads for CoreNLP; process count for spaCy / stanza
+    n_cores=N,           # JVM threads for CoreNLP; process count for spaCy; stanza parsing is serial
     corenlp_memory="12G" if N >= 16 else "6G",
 )
 
@@ -71,36 +71,37 @@ export OPENBLAS_NUM_THREADS=1
 export TOKENIZERS_PARALLELISM=false
 ```
 
-The spaCy backend also sets `torch.set_num_threads(1)` inside the worker
-bootstrap; the others do not. Set these env vars anyway. They are cheap and
+The spaCy backend sets `torch.set_num_threads(1)` during initialization when torch is installed; it does not provide a separate worker bootstrap. Set these env vars anyway. They are cheap and
 the failure mode is silent slowdown.
 
 ### 3. Shard large corpora
 
-The pipeline holds the full text list in memory and streams sentences to disk
-stage by stage. RAM grows linearly with corpus size. Two complementary controls:
+The pipeline holds the full input text list in memory and writes sentence files stage by stage. Its scoring and contribution stages also materialize document text. RAM grows linearly with corpus size. Two complementary controls:
 
-- `Config(parse_chunk_size=N)` preprocesses documents in batches of `N` within
-  a single run, capping how many parsed documents are held in flight at once —
+- `cfg.with_(parse_chunk_size=N)` preprocesses documents in batches of `N` within
+  a single run, capping how many parsed documents are held in flight at once,
   the cheapest first step for a large shard.
 - For corpora beyond ~100k documents, shard the input by 10k and run one
-  pipeline per shard, aggregating at scoring time with `pandas.concat`.
+  preprocessing-only pipeline per shard. Then fit one global phrase model, Word2Vec model, dictionary, and document-frequency table before scoring. Independently scored shards have different dictionary and IDF scales.
 
 ```python
 import math
 from pathlib import Path
 from lmsy_w2v_rfs import Pipeline, Config
 
-ALL = Path("corpus.txt").read_text().splitlines()
+ALL = Path("corpus.txt").read_text(encoding="utf-8").splitlines()
+Path("shards").mkdir(exist_ok=True)
 SHARD = 10_000
 for i in range(math.ceil(len(ALL) / SHARD)):
     chunk = ALL[i * SHARD : (i + 1) * SHARD]
-    Path(f"shards/shard_{i:03d}.txt").write_text("\n".join(chunk))
+    Path(f"shards/shard_{i:03d}.txt").write_text("\n".join(chunk), encoding="utf-8")
+    ids = [str(j) for j in range(i * SHARD, i * SHARD + len(chunk))]
+    Path(f"shards/shard_{i:03d}.ids").write_text("\n".join(ids), encoding="utf-8")
 ```
 
 Each shard gets its own `work_dir`. Train Word2Vec on the concatenated
-training corpus rather than per-shard: scoring does not benefit from sharding,
-dictionary expansion needs the global vocab. See the SLURM template below.
+training corpus rather than per-shard;
+dictionary expansion needs the global vocabulary and IDF needs global document frequencies. See the preprocessing array templates and global job below.
 
 ### 4. SLURM template
 
@@ -135,6 +136,7 @@ i = int(os.environ['SLURM_ARRAY_TASK_ID'])
 cfg = Config(seeds=seeds, preprocessor='corenlp', n_cores=8, corenlp_memory='12G',
              corenlp_port=9002 + i)
 p = Pipeline.from_text_file(f'shards/shard_{i:03d}.txt',
+                            id_path=f'shards/shard_{i:03d}.ids',
                             work_dir=f'runs/shard_{i:03d}', config=cfg)
 p.parse()
 p.clean()
@@ -190,6 +192,7 @@ N = int(os.environ.get('NSLOTS', 8))
 cfg = Config(seeds=seeds, preprocessor='corenlp', n_cores=N, corenlp_memory='12G',
              corenlp_port=9002 + i)
 p = Pipeline.from_text_file(f'shards/shard_{i:03d}.txt',
+                            id_path=f'shards/shard_{i:03d}.ids',
                             work_dir=f'runs/shard_{i:03d}', config=cfg)
 p.parse()
 p.clean()
@@ -209,6 +212,33 @@ Cluster-specific details vary, so check your site's user guide:
   versions reproducibly. Run `module avail` to find the names at your site.
 - On Linux, fork-based multiprocessing works and spaCy workers share the
   model via copy-on-write.
+
+### 6. Combine preprocessing outputs and run global stages
+
+Run this job after every preprocessing task succeeds. Use a fresh `runs/global` directory. The ordered shell globs concatenate text and IDs in the same shard order; the `.ids` files above ensure that IDs do not repeat between shards.
+
+```bash
+mkdir -p runs/global/cleaned runs/global/parsed
+cat runs/shard_*/cleaned/sentences.txt > runs/global/cleaned/sentences.txt
+cat runs/shard_*/parsed/sentence_ids.txt > runs/global/parsed/sentence_ids.txt
+```
+
+Then train and score once over the combined corpus:
+
+```python
+from lmsy_w2v_rfs import Config, Pipeline, load_example_seeds
+
+cfg = Config(seeds=load_example_seeds("culture_2021"), n_cores=8)
+p = Pipeline(work_dir="runs/global", config=cfg)
+p.phrase()
+p.train()
+p.expand_dictionary()
+p.score(methods=("TFIDF",))
+```
+
+The combined cleaned sentences are already preprocessed, so this job skips `parse` and `clean`. `p.score` computes IDF across all combined documents. Inspect and curate the single dictionary before downstream analysis. Do not call `p.run()` here: the original raw input is absent from this Pipeline object.
+
+For a combined corpus too large for Pipeline scoring memory, use the lower-level `document_frequencies` over the complete corpus iterator first, then `score_documents` on batches with that same dictionary, global frequencies, and global document count. Batch outputs can then be concatenated. Apply L2 normalization consistently; fit whitening once after combining the scores.
 
 ## Gotcha: fork vs spawn on macOS
 

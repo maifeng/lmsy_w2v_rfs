@@ -20,7 +20,6 @@ from pathlib import Path
 from .config import Config, load_seeds
 from .pipeline import Pipeline
 
-
 _PREPROCESSOR_CHOICES = ("none", "static", "stanza", "corenlp", "spacy")
 _INPUT_FORMAT_CHOICES = ("text", "csv", "jsonl", "directory")
 _METHOD_CHOICES = ("TF", "TFIDF", "WFIDF", "TFIDF+SIMWEIGHT", "WFIDF+SIMWEIGHT")
@@ -182,7 +181,10 @@ def main(argv: list[str] | None = None) -> int:
         argv: Optional argv. Uses ``sys.argv`` when ``None``.
 
     Returns:
-        Process exit code. 0 on success, 1 on usage errors.
+        Process exit code, 0 on success.
+
+    Raises:
+        SystemExit: With code 2 for command-line usage errors from argparse.
     """
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     parser = argparse.ArgumentParser(

@@ -13,7 +13,7 @@ extra raises an actionable message such as:
 ImportError: The stanza preprocessor could not be loaded. It needs the '[stanza]'
 extra: pip install 'lmsy_w2v_rfs[stanza]'. If stanza is installed but still fails
 to import (e.g. an OSError about GLIBC on an older Linux/HPC node), the
-torch/stanza wheels are incompatible with that system — use preprocessor='spacy'
+torch/stanza wheels are incompatible with that system, use preprocessor='spacy'
 or 'none'.
 ```
 
@@ -30,7 +30,7 @@ pip install "lmsy_w2v_rfs[stanza]"
 The same pattern applies to `corenlp` (`[corenlp]` extra) and `spacy` (`[spacy]`
 extra plus `python -m spacy download en_core_web_sm`). Install all three with
 `pip install "lmsy_w2v_rfs[all]"`. On an old-glibc cluster (CentOS 7, glibc <
-2.17) the torch wheels may fail to load even when installed — use
+2.17) the torch wheels may fail to load even when installed, use
 `preprocessor="none"` or `"spacy"` with a compatible wheel.
 
 ---
@@ -54,7 +54,7 @@ java -version                     # verify
 
 # Or switch to a Java-free backend:
 pip install "lmsy_w2v_rfs[spacy]" && python -m spacy download en_core_web_sm
-# then set Config(preprocessor="spacy")
+# then set cfg.with_(preprocessor="spacy")
 ```
 
 ---
@@ -77,7 +77,7 @@ lmsy-w2v-rfs download-corenlp           # (re)download the ~1 GB archive
 ls ~/.cache/lmsy_w2v_rfs/corenlp/       # verify jars are present
 ```
 
-Pass `Config(corenlp_memory="8G")` if the default `"6G"` is too small for long documents.
+Pass `cfg.with_(corenlp_memory="8G")` if the default `"6G"` is too small for long documents.
 
 ---
 

@@ -11,9 +11,7 @@ keeping column names interpretable.
 ## Solution
 
 Apply ZCA (zero-phase component analysis) whitening as a post-scoring
-step. ZCA is the whitening transform that makes the columns uncorrelated
-with unit variance while staying as close as possible to the original
-axes. Unlike PCA whitening, ZCA does not rotate the data into a new
+step. Regularized ZCA moves the covariance toward identity while preserving the original coordinate system. Constant or rank-deficient dimensions cannot attain unit variance. Unlike PCA whitening, ZCA does not rotate the data into a new
 basis: the column named ``integrity`` still measures something close to
 integrity, not "principal component 1".
 
@@ -46,22 +44,22 @@ df_whitened = zca_whiten(
 ### CLI
 
 ```bash
-lmsy-w2v-rfs run --input docs.txt --out runs/x --zca-whiten
+lmsy-w2v-rfs run --input docs.txt --seeds my_seeds.txt --out runs/x --zca-whiten
 ```
 
 ## Notes
 
 - **In-sample fit**: the transform is computed from `scores[dims]`
-  itself, so the decorrelation is exact on the data you pass in. If you
+  itself. With positive epsilon, identity covariance is approximate even on the fitting data; singular inputs cannot be fully whitened. If you
   want new documents to land on the same whitened scale, compute the
   whitening matrix on a reference corpus and cache it; apply the cached
   matrix to future scores. The current implementation does not split fit
   and transform; for now, fit on the full corpus you plan to analyze.
-- **`epsilon`**: eigenvalue floor for numerical stability. Default
+- **`epsilon`**: positive ridge term added to every covariance eigenvalue for numerical stability. Default
   `1e-6`. Raise to `1e-4` if the covariance is near-singular (small
   corpus, or dimensions that are nearly-degenerate).
 - **Order of operations**: whitening runs after tf-idf weighting and
-  after L2 normalization (if `Config(tfidf_normalize=True)` is set) but
+  after L2 normalization (if `tfidf_normalize=True` is set on the Config) but
   before `firm_year` aggregation. Firm-year means are over whitened
   document scores.
 - **Interaction with firm-year aggregation**: the per-document divide-by-

@@ -41,8 +41,8 @@ _MWE_DEPS = {"fixed", "flat", "compound"}
 class CoreNLPPreprocessor:
     """CoreNLP-server-based preprocessor.
 
-    The client is started when the first document is processed and kept
-    warm until ``close()`` is called or the instance is garbage collected.
+    The client is started during construction and kept warm until
+    ``close()`` is called.
     Use as a context manager (``with CoreNLPPreprocessor(cfg) as pp:``) to
     guarantee clean shutdown.
     """
@@ -106,6 +106,11 @@ class CoreNLPPreprocessor:
         log.info("CoreNLPPreprocessor ready")
 
     def __enter__(self) -> CoreNLPPreprocessor:
+        """Enter the client context.
+
+        Returns:
+            This preprocessor, ready to process documents.
+        """
         return self
 
     def __exit__(self, *args: object) -> None:

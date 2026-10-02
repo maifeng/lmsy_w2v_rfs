@@ -1,14 +1,14 @@
 # Design decisions
 
-This page explains the "why" behind the load-bearing choices in `lmsy_w2v_rfs`. The package packages a research pipeline from Li, Mai, Shen, Yan (2021), so several decisions are driven by paper-faithfulness. Others are driven by an empirical benchmark on 60 multi-word expressions, 50 NER sentences, and 1,393 earnings-call documents. See [MWE benchmark comparison](mwe-comparison.md) for the numbers.
+This page explains the "why" behind the load-bearing choices in `lmsy_w2v_rfs`. The package packages a research pipeline from Li, Mai, Shen, Yan (2021), so several decisions are driven by paper-faithfulness. Others are driven by an empirical benchmark on 60 multi-word expressions, 50 NER sentences, and 1,393 earnings-call documents. See [MWE benchmark comparison](mwe-comparison.md) for the reported numbers and reproducibility limits.
 
 ---
 
 ## Why `none` is the default preprocessor (and CoreNLP is the paper-faithful opt-in)
 
-The default is `preprocessor="none"`: a bare `pip install lmsy_w2v_rfs` runs the whole pipeline with no Java, no model download, and no extra dependencies. That makes the first run friction-free, which matters more than parsing quality for someone just trying the package — and `none` still produces sensible dictionaries because gensim `Phrases` (Phase 2) and Word2Vec do most of the work regardless of the Phase 1 backend.
+The default is `preprocessor="none"`: a bare `pip install lmsy_w2v_rfs` runs the whole pipeline with no Java, no model download, and no extra dependencies. That makes the first run friction-free, which matters more than parsing quality for someone just trying the package, and `none` still produces sensible dictionaries because gensim `Phrases` (Phase 2) and Word2Vec do most of the work regardless of the Phase 1 backend.
 
-CoreNLP is the recommended opt-in when you want the paper's exact Phase 1 behavior. On the 60-phrase test set, CoreNLP 4.5 catches 16 of 21 syntactic MWEs (76%), compared with 12 of 21 for stanza (57%) and 0 of 21 for spaCy. The gap is in UD v2 `fixed` patterns like `with_respect_to`, `in_spite_of`, `due_to`, which CoreNLP's PTB-to-UD converter encodes as hand-written rules; stanza and spaCy must predict these from treebank data where the patterns are sparse.
+CoreNLP is the recommended opt-in when you want the paper's Phase 1 parsing approach. On the 60-phrase test set, CoreNLP 4.5 catches 16 of 21 syntactic MWEs (76%), compared with 12 of 21 for stanza (57%) and 0 of 21 for spaCy. The gap is in UD v2 `fixed` patterns like `with_respect_to`, `in_spite_of`, `due_to`, which CoreNLP's PTB-to-UD converter encodes as hand-written rules; stanza and spaCy must predict these from treebank data where the patterns are sparse.
 
 On throughput, CoreNLP's JVM thread pool scales 5.74x from 1 to 8 threads because all threads share one loaded model, processing the full 1,393-document benchmark corpus in 11.7 minutes at `n_cores=8`. spaCy is faster (~4 minutes) but with 0% syntactic MWE recall. The cost of CoreNLP is real: Java 8+ on `$PATH` and a ~1 GB one-time download, which is why it is opt-in. Users who want richer parsing without Java should reach for `spacy`.
 
@@ -36,7 +36,7 @@ gensim `Phrases` is the principled way to discover domain-specific MWEs: it look
 
 Preprocessor selection is a trade-off surface with three axes: Java vs Python-only, fast vs faithful, deterministic vs learned. No single backend wins on all three.
 
-| value | Java? | Syntactic MWE | Throughput at 8 workers |
+| value | Java? | Syntactic MWE | Reported throughput (stanza serial) |
 |---|---|---|---|
 | `none` | no | 0% | fastest |
 | `static` | no | 100% on the list, 0% off the list | fast |
@@ -44,17 +44,17 @@ Preprocessor selection is a trade-off surface with three axes: Java vs Python-on
 | `stanza` | no | 57% | ~5 hours on 1,393 docs on CPU |
 | `corenlp` | yes | 76% | 11.7 min on 1,393 docs |
 
-Shipping all five lets users pick based on their actual constraint. The zero-dependency `none` is the default for first runs and already-tokenized text. Classroom Colab notebooks pick `spacy` because Java is absent. Paper-exact reproducers pick `corenlp`. The underlying Word2Vec, expansion, and scoring code is identical across backends, so switching one flag changes the upstream parser without touching the downstream analysis.
+Shipping all five lets users pick based on their actual constraint. The zero-dependency `none` is the default for first runs and already-tokenized text. Classroom Colab notebooks pick `spacy` because Java is absent. Paper-based reproducers pick `corenlp`. The underlying Word2Vec, expansion, and scoring code is identical across backends, so switching one flag changes the upstream parser without touching the downstream analysis.
 
 ---
 
 ## Why `Pipeline` stages are idempotent and resumable
 
-`Pipeline` exposes six stages (`parse`, `clean`, `phrase`, `train`, `expand_dictionary`, `score`) and writes each stage's output under `work_dir/`. A rerun of the same `work_dir` resumes from the latest stage that has complete artifacts; stages with `force=True` redo from scratch.
+`Pipeline` exposes six stages (`parse`, `clean`, `phrase`, `train`, `expand_dictionary`, `score`) and writes each stage's output under `work_dir/`. Each stage independently reuses its existing output files; stages with `force=True` redo from scratch. Retraining or deleting one output does not automatically invalidate downstream outputs.
 
 Researchers iterate. A Word2Vec run with the wrong `w2v_dim` should not force redo of the 11.7-minute CoreNLP parse. A prompt-engineering pass on the seed dictionary should not re-tokenize 1,393 documents. Forcing every stage to redo on every invocation is the single fastest way to make a research package unusable.
 
-The idempotence is implemented by writing each stage's output to a stable path under `work_dir` and checking for its existence at stage entry. The `parse` and `clean` stages write to a temporary file and atomically rename it on success, so a crash never leaves a half-written file that the existence check would mistake for a completed stage. Users can delete one artifact to rerun exactly one stage.
+The idempotence is implemented by writing each stage's output to a stable path under `work_dir` and checking for its existence at stage entry. The `parse` and `clean` stages write to a temporary file and atomically rename it on success, so a crash never leaves a half-written file that the existence check would mistake for a completed stage. Users can delete one artifact to rerun that stage, then explicitly force any dependent stages. Re-expansion replaces a manually curated dictionary, so preserve it before rebuilding.
 
 ---
 

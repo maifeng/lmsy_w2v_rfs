@@ -41,14 +41,14 @@ Deterministic, Java-free, zero-ML.
 ## StanzaPreprocessor
 
 Neural stanza pipeline (tokenize, pos, lemma, depparse, ner) without Java.
-Slowest of the three parser-based backends on CPU. Produces the largest
+This package runs it serially on CPU (`use_gpu=False`); `n_cores` does not parallelize Stanza parsing. Produces the largest
 vocabulary because stanza's NER model is more type-fine-grained than CoreNLP.
 
 ::: lmsy_w2v_rfs.preprocessors.stanza_pp.StanzaPreprocessor
 
 ## CoreNLPPreprocessor
 
-Paper-exact reproduction path. Holds a warm Stanford CoreNLP JVM open via
+Paper-based reproduction path. Holds a warm Stanford CoreNLP JVM open via
 `stanza.server.CoreNLPClient` and fans requests across its thread pool. Use as
 a context manager to guarantee server shutdown. Requires Java 8+ and the
 `[corenlp]` extra.

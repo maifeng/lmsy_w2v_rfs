@@ -1,12 +1,12 @@
 # Scoring
 
-Once the dictionary is built, every document is scored as a weighted count of its dictionary hits, one score per dimension. `Pipeline.score` returns a DataFrame with one row per document, one column per dimension, plus a `document_length` column.
+Once the dictionary is built, every document is scored as a weighted count of its dictionary hits, one score per dimension. `Pipeline.score` returns a mapping from method names to DataFrames. Each DataFrame has one row per document, one column per dimension, and a `document_length` column. Use `p.score_df(method)` to retrieve one method's DataFrame.
 
 ---
 
 ## The five methods
 
-Let `tf` be the in-document frequency of a dictionary word, `df` its document frequency across the corpus, `N` the number of documents, and `rank` the word's rank in its dimension's expanded list (seeds at rank 0). Each hit contributes the following weight:
+Let `tf` be the in-document frequency of a dictionary word, `df` its document frequency across the corpus, `N` the number of documents, and `rank` the word's rank in its dimension's expanded list (zero-based position, including seeds). Each hit contributes the following weight:
 
 | Method | Per-hit weight |
 |---|---|
@@ -16,9 +16,9 @@ Let `tf` be the in-document frequency of a dictionary word, `df` its document fr
 | `TFIDF+SIMWEIGHT` | $tf \cdot \log(N / df) \cdot \dfrac{1}{\ln(2 + \text{rank})}$ |
 | `WFIDF+SIMWEIGHT` | $(1 + \log tf) \cdot \log(N / df) \cdot \dfrac{1}{\ln(2 + \text{rank})}$ |
 
-`TF` is the naive count baseline. `TFIDF` downweights words that appear in most documents, so a term like `quality` that shows up everywhere contributes less than a rare synonym. `WFIDF` applies sublinear term frequency, which further dampens the effect of a word repeated many times in one document. The `+SIMWEIGHT` variants multiply in a similarity weight derived from dictionary rank: seeds (rank 0) get weight $1/\ln 2 \approx 1.44$, rank 100 gets $1/\ln 102 \approx 0.22$. This **rank-based** weight depends on a word's position in the similarity ordering, so two words at adjacent ranks get nearly equal weight even when their cosine similarities differ; it is the weighting scheme adopted in several studies that build on the 2021 method. `Config.tfidf_normalize=True` L2-normalizes the tfidf vector per document. `Config.zca_whiten=True` applies ZCA whitening to decorrelate the dimension columns after scoring; see [Whiten the dimension scores](../how-to/whiten-scores.md).
+`TF` is the naive count baseline. `TFIDF` downweights words that appear in most documents, so a term like `quality` that shows up everywhere contributes less than a rare synonym. `WFIDF` applies sublinear term frequency, which further dampens the effect of a word repeated many times in one document. The `+SIMWEIGHT` variants multiply in a similarity weight derived from dictionary rank: the first dictionary word (rank 0) gets weight $1/\ln 2 \approx 1.44$, rank 100 gets $1/\ln 102 \approx 0.22$. This **rank-based** weight depends on a word's position in the similarity ordering, so two words at adjacent ranks get nearly equal weight even when their cosine similarities differ. `Config.tfidf_normalize=True` L2-normalizes the dimension-score vector per document for every requested method. `Config.zca_whiten=True` applies ZCA whitening to decorrelate the dimension columns after scoring; see [Whiten the dimension scores](../how-to/whiten-scores.md).
 
-Per dimension, the raw score is the sum of per-hit weights over all dictionary matches. `document_length` is the count of non-stopword tokens in the cleaned document.
+Per dimension, the raw score is the sum of per-hit weights over all dictionary matches. `document_length` counts tokens in the final scoring corpus, after cleaning and any phrase joining.
 
 ---
 
@@ -35,7 +35,7 @@ flowchart LR
     style SCORE fill:#fef3e8,stroke:#c16d19
 ```
 
-The corpus is streamed rather than pickled, which was a change from the 2021 replication repo's `corpus_doc_level.pickle` materialization. On a 1,400-document corpus this saves a few hundred MB of disk and a minute of IO.
+The lower-level corpus iterator streams sentences from disk. `Pipeline.score` materializes the assembled documents in a list to reuse them across methods, and `score_documents` accumulates output rows. The pipeline avoids a pickled corpus artifact but still requires memory for the document text and scores.
 
 ---
 

@@ -3,7 +3,7 @@
 ## Problem
 
 CoreNLP is the opt-in, paper-faithful preprocessor: it reproduces the 2021
-paper's Phase 1 behavior exactly and gives the best syntactic MWE coverage on
+paper's Phase 1 parsing approach and gives the best syntactic MWE coverage on
 the benchmark (76%, versus 57% for stanza and 0% for spaCy). The default
 backend is `"none"`, which needs no setup. Getting CoreNLP running takes
 three things working at once: a Java 8+ runtime on `$PATH`, the `[corenlp]`
@@ -117,7 +117,7 @@ matrix.
 - The downloader is idempotent. Rerunning it refreshes the cache but does not
   re-download files that are already present and valid.
 - Port 9002 is the default for the embedded JVM server. Change it via
-  `Config(corenlp_port=...)` if another service is listening there.
-- `Config(corenlp_memory="6G")` sets the JVM heap. Lower to `"2G"` on laptops
+  `cfg.with_(corenlp_port=...)` if another service is listening there.
+- `cfg.with_(corenlp_memory="6G")` sets the JVM heap. Lower to `"2G"` on laptops
   with tight memory budgets. The parser still works, it just caches fewer
   pretrained models at once.

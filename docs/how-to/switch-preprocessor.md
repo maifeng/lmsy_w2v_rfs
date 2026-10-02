@@ -90,8 +90,7 @@ cfg = Config(
 ```
 
 Needs `pip install "lmsy_w2v_rfs[stanza]"`. First run auto-downloads the
-English UD model. Expect ~5 hours for 1,393 docs on CPU; GPU is not yet
-supported on Apple Silicon and is optional on CUDA.
+English UD model. Expect ~5 hours for 1,393 docs on CPU; The package currently forces CPU execution and processes documents serially; `n_cores` only affects later Word2Vec training for this backend.
 
 **Static (no parser, deterministic):**
 
@@ -145,10 +144,10 @@ Pass a path to your own list for any other domain.
 
 - Switching preprocessors after a run has already produced `work_dir/parsed/`
   does NOT trigger a re-parse. The stage detects existing output and reuses it.
-  Delete `work_dir/parsed/` or pass `force=True` to redo Phase 1a. See
+  Use a new work directory for a different preprocessor, or explicitly force parsing and each downstream stage that needs rebuilding. Deleting only `parsed/` does not rebuild existing downstream artifacts. See
   [Resume after a crash](resume-after-crash.md).
 - `n_cores` means "JVM threads" for CoreNLP and "Python worker processes" for
-  spaCy and stanza. On macOS, Python multiprocessing defaults to `spawn`,
+  spaCy. Stanza parsing is serial in this package. On macOS, Python multiprocessing defaults to `spawn`,
   which reloads the spaCy model per worker. See [Run on HPC](run-on-hpc.md).
 - The `corenlp` and `stanza` backends both emit UD v2 labels, but on different
   models trained on different data. They disagree on roughly a third of `fixed`

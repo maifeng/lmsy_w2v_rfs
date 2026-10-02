@@ -2,9 +2,9 @@
 
 Wraps the five stages of the 2021 paper behind one class:
 
-1. **parse**: optional CoreNLP multi-word-expression tagging.
-2. **clean**: strip POS/NER tags, drop stopwords and punctuation.
-3. **phrase**: gensim Phrases bigram (and optional trigram) pass.
+1. **parse**: selected backend tokenization, with optional NER and MWE parsing.
+2. **clean**: drop stopwords and punctuation, retaining NER placeholders.
+3. **phrase**: optional successive gensim Phrases joining passes.
 4. **train**: Word2Vec on the phrase-expanded corpus.
 5. **expand + score**: build the dictionary and score documents.
 

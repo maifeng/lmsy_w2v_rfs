@@ -1,16 +1,16 @@
 # Preprocessor comparison
 
-This page summarizes the empirical study behind the five preprocessor backends. The point is to let a researcher pick a backend based on numbers rather than guesswork.
+This page records an earlier comparison of the five preprocessor backends. The repository does not include its gold labels, benchmark scripts, raw logs, or a complete hardware/model-version specification. Treat the numbers as reported observations from that run rather than independently reproducible performance guarantees. NER results below apply to the listed models, including spaCy-trf; they should not be transferred to spaCy-sm.
 
 ---
 
 ## What we measured
 
-Three complementary tests, all run on the same hardware (Apple Silicon M-series CPU, `OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`):
+The reported comparison used three tests on the same hardware (Apple Silicon M-series CPU, `OMP_NUM_THREADS=1`, `MKL_NUM_THREADS=1`):
 
 1. **60-phrase MWE test**. Hand-labeled gold MWEs across six categories: idiomatic (10), grammaticalized fixed (13), compound nouns (10), business jargon (11), phrasal verbs (8), named entities (8). A backend "catches" a phrase if it proposes a join whose endpoints both fall inside the gold MWE.
 2. **50-sentence NER test**. Hand-labeled entity spans and types across person, organization, location, money, date, and other categories. Scored on both span recall and type accuracy.
-3. **1,393-document end-to-end bakeoff**. Real earnings-call transcripts, parsed with each backend at `n_cores=8`. Measured wall time, CPU utilization, entity count, and sentence count.
+3. **1,393-document end-to-end bakeoff**. Real earnings-call transcripts, CoreNLP and spaCy used `n_cores=8`; this package runs stanza parsing serially on CPU. Measured wall time, CPU utilization, entity count, and sentence count.
 
 ---
 
@@ -64,9 +64,9 @@ Practical consequence: any parser-based preprocessor inherits this ceiling. If y
 
 **CoreNLP 4.5** is best for paper-faithful reproduction and maximum syntactic MWE coverage. Its PTB-to-UD rule converter encodes more `fixed` patterns than any treebank-trained model has seen. Its JVM thread pool scales near-linearly. Its NER type accuracy is the weakest of the three parsers (78%), but our downstream use only needs entity spans for masking, so this matters less than it looks. Worst at: install friction. Needs Java 8+ and a 1 GB download.
 
-**stanza (EWT)** is the Python-native middle ground. Strong on compounds and phrasal verbs, weaker on `fixed` patterns (4/13). Best when you need POS tags and a modern neural parser without Java. Worst at: CPU throughput. Stanza on CPU takes ~5 hours on the full 1,393-doc corpus because PyTorch neural parsing is slow without GPU acceleration, and stanza does not yet support Apple Silicon MPS.
+**stanza (EWT)** is the Python-native middle ground. Strong on compounds and phrasal verbs, weaker on `fixed` patterns (4/13). Best when you need POS tags and a modern neural parser without Java. Worst at: CPU throughput. Stanza on CPU takes ~5 hours on the full 1,393-doc corpus because PyTorch neural parsing is slow without GPU acceleration, and this package disables GPU execution.
 
-**spaCy** is the fastest backend by a wide margin (3.9 min on 1,393 docs with `en_core_web_sm`). Best NER by span recall (100%) and type accuracy (96%). Worst at: syntactic MWE. The English model's ClearNLP-to-UD converter does not emit `fixed` or `compound:prt` at all, so syntactic MWE recall is 0%. spaCy is a good choice for workshop and classroom settings where Java is unavailable and where Phase 2 (gensim `Phrases`) plus an optional static list can pick up the MWE slack.
+**spaCy** is the fastest backend by a wide margin (3.9 min on 1,393 docs with `en_core_web_sm`). The reported transformer-model test had 100% span recall and 96% type accuracy; these numbers do not characterize the smaller English models. Worst at: syntactic MWE. The English model's ClearNLP-to-UD converter does not emit `fixed` or `compound:prt` at all, so syntactic MWE recall is 0%. spaCy is a good choice for workshop and classroom settings where Java is unavailable and where Phase 2 (gensim `Phrases`) plus an optional static list can pick up the MWE slack.
 
 **static** is a precision tool backed by NLTK's `MWETokenizer`. 100% recall on the list, 0% off the list. Best when you know the exact set of MWEs you care about. Worst at: discovery. It cannot find MWEs you did not already think of.
 
@@ -80,7 +80,7 @@ The default is `none` (zero dependencies, no Java). Switch to:
 
 - **`corenlp`** for paper-faithful reproduction and the highest syntactic MWE coverage. Needs Java 8+ and a one-time ~1 GB download.
 - **`spacy`** when you want richer parsing than `none` without Java (Colab classroom, slim Docker image, CI runner), when wall time matters more than MWE quality, or when the downstream analysis needs the strongest NER masking. Pair with `use_gensim_phrases=True` and optionally a curated `mwe_list` to recover some MWE coverage.
-- **`stanza`** when you need a Python-native pipeline with modern UD labels and do not need the JVM. Only viable on GPU or on small corpora (< 100 docs) if you are on CPU. Stanza is actively developed at Stanford NLP and receives new neural capabilities first; CoreNLP is in maintenance mode.
+- **`stanza`** when you need a Python-native pipeline with modern UD labels and do not need the JVM. This package currently sets `use_gpu=False` and parses serially, so budget for CPU throughput. There is no Config option for GPU or Stanza parsing workers.
 - **`static`** when your domain has a known set of MWEs and you want deterministic, debuggable behavior. Combine with `preprocessor="static"` and pass `mwe_list="finance"` or your own path.
 - **`none`** when your text is already tokenized and lemmatized upstream, or when you are iterating on the Word2Vec stage and want to eliminate parsing time.
 

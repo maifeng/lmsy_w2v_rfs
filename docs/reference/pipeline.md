@@ -9,7 +9,7 @@ The six stages:
 
 - `parse`: Phase 1 preprocessing (MWE join, NER mask) via the configured backend.
 - `clean`: lowercase, strip punctuation, drop stopwords, keep `[NER:*]` placeholders.
-- `phrase`: gensim `Phrases` statistical bigram / trigram learning (Phase 2).
+- `phrase`: gensim `Phrases` statistical repeated statistical phrase joining (Phase 2).
 - `train`: Word2Vec training on the phrase-expanded corpus.
 - `expand_dictionary`: grow each seed list into a per-dimension dictionary via
   nearest-neighbor search on the trained vectors.

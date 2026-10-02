@@ -32,34 +32,28 @@ p.run()            # after a crash: skips stages whose outputs exist
 Each stage logs either `stage: reusing path/to/output` (skipped) or starts a
 tqdm bar (executing). No code change between runs.
 
-### Force re-execution of one stage
+### Rebuild a stage and selected downstream outputs
 
-Delete its output file. The pipeline will detect the missing artifact and
-rerun only that stage plus everything downstream.
+Each stage checks its own output files independently. Deleting `w2v.mod` reruns training, but an existing dictionary and existing score files are still reused. Use a new work directory when changing the corpus or configuration.
 
-```bash
-# Redo just the Word2Vec training, keeping parse / clean / phrase outputs.
-rm runs/my_experiment/models/w2v.mod
-
-python -c "
-from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
-seeds = load_example_seeds('culture_2021')
-p = Pipeline(texts=..., doc_ids=..., work_dir='runs/my_experiment',
-             config=Config(seeds=seeds, preprocessor='corenlp'))
-p.run()
-"
-```
-
-Equivalent stage-by-stage calls if you want finer control:
+If you intend to rebuild the dictionary from a retrained model, explicitly force each affected stage:
 
 ```python
-p.parse()                   # skips if runs/.../parsed/sentences.txt exists
-p.clean()                   # skips if runs/.../cleaned/sentences.txt exists
-p.phrase()                  # skips if runs/.../corpora/pass2.txt exists
-p.train(force=True)         # always retrains Word2Vec
+p.train(force=True)
 p.expand_dictionary(force=True)
 p.score(force=True)
+p.word_contributions("TFIDF", force=True)
 ```
+
+`expand_dictionary(force=True)` replaces the saved dictionary, including manual curation. Back up the curated CSV first if you need to retain it. If you intentionally keep the existing curated dictionary, skip re-expansion and explicitly rescore:
+
+```python
+p.train(force=True)
+p.reload_dictionary()
+p.score(force=True)
+```
+
+Changing parsing or phrase settings similarly requires explicit forcing of all affected stages. `p.run(force=True)` rebuilds every stage and replaces the dictionary. There is no automatic downstream invalidation after retraining or deleting a stage artifact.
 
 ### Force re-execution of the whole pipeline
 
@@ -82,7 +76,7 @@ runs/my_experiment/
 │   └── sentences.txt                     stopwords and punctuation dropped
 ├── corpora/
 │   ├── pass1.txt                         after gensim bigram Phrases
-│   └── pass2.txt                         after bigram + trigram Phrases
+│   └── pass2.txt                         after two Phrases joining passes
 ├── models/
 │   ├── w2v.mod                           trained Word2Vec (gensim format)
 │   └── phrases_pass1.mod / pass2.mod     fitted Phrases models
@@ -118,7 +112,7 @@ One sentence per file:
 | `expand_dictionary` | `models/w2v.mod` | `outputs/expanded_dict.csv` |
 | `score` | `corpora/pass{N}.txt` (or `cleaned/sentences.txt` when `use_gensim_phrases=False`), `parsed/sentence_ids.txt`, `expanded_dict.csv` | `outputs/scores_{METHOD}.csv` |
 
-Deleting a file forces that stage and all downstream stages to rerun.
+Deleting a file reruns only the stage that checks that file. Explicitly force any dependent stages whose outputs must change.
 
 ## Gotcha: config changes do not invalidate artifacts
 
@@ -132,8 +126,7 @@ The dumped `config.json` in `work_dir/` is an audit trail; the pipeline never re
 ## Gotcha: partial writes
 
 The `parse` and `clean` stages write to a temporary file and atomically rename
-it on success, so a crash leaves no truncated output — the stage simply re-runs
-cleanly on the next invocation. The `phrase` and `train` stages write their
+it on success, so an interruption while writing leaves temporary files instead of truncated published output. Parse publishes its sentence and ID files separately; if publication itself is interrupted, delete both parsed outputs before rerunning. The `phrase` and `train` stages write their
 model files directly, so a crash mid-write *can* leave a corrupt `models/w2v.mod`
 or `models/phrases_pass*.mod`. If a run crashed during those stages, delete the
 suspect model file (or pass `force=True`) and rerun.

@@ -26,8 +26,8 @@ The example below uses the bundled culture seeds; substitute your own dimensions
 
 Take the `integrity` seeds from `load_example_seeds("culture_2021")`: `integrity`, `ethic`, `ethical`, `accountable`, `accountability`, `trust`, `honesty`, `honest`, `honestly`, `fairness`, `responsibility`, `responsible`, `transparency`, `transparent` (14 total). After Word2Vec training:
 
-1. **Average the vectors.** Look up each seed in `w2v.wv.key_to_index`. Seeds missing from the vocabulary are silently skipped. The remaining vectors are averaged into a 300-dimensional "integrity prototype."
-2. **Query near neighbors.** Call `w2v.wv.most_similar(positive=[mean_vec], topn=n_words_dim)` with `n_words_dim=500` by default. The result is a list of `(word, cosine)` pairs. `Config.dict_restrict_vocab` can cap the search to the top fraction of the vocabulary by frequency; `Config.min_similarity` trims the tail below a cosine threshold.
+1. **Average the vectors.** Look up each seed in `w2v.wv.key_to_index`. Seeds missing from the vocabulary are silently skipped. Expansion uses gensim's average of unit-normalized seed vectors as the query. Ranking and cross-dimension assignment use `n_similarity`, which averages raw seed vectors before cosine normalization. These are the original replication code's conventions.
+2. **Query near neighbors.** Call `w2v.wv.most_similar(in_vocab_seeds, topn=n_words_dim)` with `n_words_dim=500` by default. The result is a list of `(word, cosine)` pairs. `Config.dict_restrict_vocab` can cap the search to the top fraction of the vocabulary by frequency; `Config.min_similarity` trims the tail below a cosine threshold.
 3. **Strip NER placeholders.** Any `[ner:*]` token that leaked through is filtered before the dictionary is written.
 
 Do the same for `teamwork`, `innovation`, `respect`, and `quality` (the other four bundled dimensions), and you have five candidate lists of up to 500 words each. With your own seeds, you define as many dimensions as you need.
@@ -38,7 +38,7 @@ A word like `dedication` is close to both `integrity` and `quality` in vector sp
 
 ## Ranking and writing
 
-Once each word has a single home dimension, `rank_by_similarity` sorts the members of each dimension by cosine to that dimension's seed mean, descending. Seeds themselves sit at rank 0 (the seed vector is in the seed mean). The ranked lists are written to `expanded_dict.csv` with one column per dimension.
+Once each word has a single home dimension, `rank_by_similarity` sorts the members of each dimension by cosine to that dimension's seed mean, descending. Seeds are included in the same similarity ordering as expansion words. Rank 0 belongs to the first word; a seed can occupy any rank. The ranked lists are written to `expanded_dict.csv` with one column per dimension.
 
 ---
 

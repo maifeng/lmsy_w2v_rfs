@@ -9,7 +9,7 @@ introduced in Li, Mai, Shen, and Yan (2021). A researcher specifies a small set 
 seed words for each concept to be measured; the package trains Word2Vec on the
 target corpus, expands each concept's seeds into a corpus-specific dictionary of
 related words and multi-word phrases, and produces document-level scores by
-TF-IDF–weighted dictionary matching. 
+TF-IDF–weighted dictionary matching.
 
 ## Citation
 
@@ -92,7 +92,7 @@ print(p.score_df("TFIDF"))  # per-document scores
 The first two concepts come from the paper's culture construct; `compensation` is a
 concept *outside* the five culture dimensions, included to show the method
 generalizes. On a corpus of employee reviews, the expansion fills each concept with
-the corpus's own vocabulary — note that the seeds never mentioned `401k_match`,
+the corpus's own vocabulary. The seeds never mentioned `401k_match`,
 `dental`, or `mentorship`:
 
 ```text
@@ -113,11 +113,11 @@ The same `Pipeline` also accepts in-memory lists, DataFrames, JSONL, and directo
 
 ```python
 Pipeline(texts=[...], doc_ids=[...], work_dir=..., config=cfg)              # in-memory list
-Pipeline.from_csv("docs.csv", text_col="text", id_col="id", ...)            # CSV
-Pipeline.from_dataframe(df, text_col="text", id_col="id", ...)              # DataFrame
-Pipeline.from_directory("./docs/", pattern="*.txt", ...)                    # one file per doc
-Pipeline.from_text_file("docs.txt", id_path="ids.txt", ...)                 # one doc per line
-Pipeline.from_jsonl("docs.jsonl", text_key="text", id_key="id", ...)        # JSONL
+Pipeline.from_csv("docs.csv", text_col="text", id_col="id", config=cfg)            # CSV
+Pipeline.from_dataframe(df, text_col="text", id_col="id", config=cfg)              # DataFrame
+Pipeline.from_directory("./docs/", pattern="*.txt", config=cfg)                    # one file per doc
+Pipeline.from_text_file("docs.txt", id_path="ids.txt", config=cfg)                 # one doc per line
+Pipeline.from_jsonl("docs.jsonl", text_key="text", id_key="id", config=cfg)        # JSONL
 ```
 
 Seeds accept a Python dict, a JSON file, or a plain text file:
@@ -132,7 +132,7 @@ CLI: `lmsy-w2v-rfs run --seeds my_seeds.txt --input docs.csv --input-format csv 
 ### Reproducing Li et al. (2021)
 
 The package ships the paper's 47 seed words across five culture dimensions, and the
-CoreNLP backend reproduces the paper's Phase 1 parsing:
+CoreNLP backend follows the paper's Phase 1 parsing approach:
 
 ```python
 from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
@@ -140,6 +140,8 @@ from lmsy_w2v_rfs import Pipeline, Config, load_example_seeds
 seeds = load_example_seeds("culture_2021")    # 47 seeds, 5 dimensions
 config = Config(seeds=seeds, preprocessor="corenlp")  # needs Java; see Install
 ```
+
+CoreNLP follows the original parsing approach with pinned tokenizer settings, but modern parser/model versions and the paper's manual dictionary curation can change the output. Selecting this backend alone does not reproduce the paper's published scores.
 
 ---
 
@@ -161,7 +163,7 @@ Phrases carry meaning that single words cannot. The package extracts them in two
 | `"corenlp"` *(paper-faithful)* | Stanford CoreNLP via `stanza.server` | `[corenlp]` extra + Java |
 | `"stanza"` | stanza `Pipeline` | `[stanza]` extra |
 
-**Step 1b, statistical (corpus-specific phrases).** After Step 1a, gensim's `Phrases` scans the parsed corpus for statistically significant adjacent-token co-occurrences and joins them with `_`. A second pass over the bigram-joined corpus learns trigrams. This step identifies recurring collocations specific to the corpus: an earnings-call corpus surfaces `forward_looking_statement` and `cost_of_capital`; a product-review corpus surfaces `customer_service` and `delivery_time`; a Glassdoor corpus surfaces `work_life_balance` and `growth_opportunity`.
+**Step 1b, statistical (corpus-specific phrases).** After Step 1a, gensim's `Phrases` scans the parsed corpus for statistically significant adjacent-token co-occurrences and joins them with `_`. A second pass joins adjacent tokens in the first pass's output and can produce trigrams or longer phrases. This step identifies recurring collocations specific to the corpus: an earnings-call corpus surfaces `forward_looking_statement` and `cost_of_capital`; a product-review corpus surfaces `customer_service` and `delivery_time`; a Glassdoor corpus surfaces `work_life_balance` and `growth_opportunity`.
 
 ```python
 from lmsy_w2v_rfs import Config, load_example_seeds
@@ -170,7 +172,7 @@ seeds = load_example_seeds("culture_2021")  # or any dict[str, list[str]]
 Config(
     seeds=seeds,
     use_gensim_phrases=True,
-    phrase_passes=2,            # 1 = bigrams; 2 = bigrams + trigrams
+    phrase_passes=2,            # 1 = one joining pass; 2 = two passes, potentially longer phrases
     phrase_min_count=10,        # works on a ~270k-doc corpus
     phrase_threshold=10.0,      # for smaller corpora try 3 / 5.0
 )
@@ -209,7 +211,7 @@ p.dictionary_preview(top_k=10)      # DataFrame for notebook display
 
 ### Step 4: Manual dictionary inspection
 
-Nearest-neighbor expansion surfaces noise: off-topic terms, industry-specific outliers, words too general to be informative. Two ways to remove them, both atomic across the in-memory dictionary and the on-disk CSV:
+Nearest-neighbor expansion surfaces noise: off-topic terms, industry-specific outliers, words too general to be informative. Two ways to remove them, with the following save behavior:
 
 ```python
 # Programmatic, replicable in a notebook:
@@ -224,13 +226,13 @@ p.edit_dictionary(
 #   3. p.reload_dictionary()
 ```
 
-Cached scores are dropped after curation. Call `p.score()` to rescore against the curated dictionary.
+`edit_dictionary` saves the updated CSV before replacing the in-memory dictionary. For external edits, save the CSV first, then call `reload_dictionary` to load it. Both methods clear cached scores and word contributions. Call `p.score()` to rescore against the curated dictionary.
 
 ---
 
 ## Scoring
 
-A document's score on a concept is the sum of TF-IDF weights for every dictionary token present in the document, divided by total document length.
+A document's raw score on a concept is the sum of TF-IDF weights for every dictionary token present in the document. `score_df` returns these raw scores. `firm_year` divides them by document length, multiplies by 100, and averages within each group.
 
 | Method | Weight per dictionary hit | Source |
 |---|---|---|
@@ -242,9 +244,7 @@ A document's score on a concept is the sum of TF-IDF weights for every dictionar
 The `+SIMWEIGHT` variants additionally weight each word by its **rank** in the
 similarity-ordered dictionary (`1/ln(2 + rank)`), so words nearer the seed
 centroid count more and peripheral expansion words count less. The weight depends
-on rank alone — the cosine similarities enter only by setting that ranking. This
-rank-based similarity weighting is the scheme several studies building on the
-method have adopted.
+on rank alone; cosine similarities set the ranking.
 
 ```python
 p.score(methods=("TFIDF",))
@@ -263,7 +263,7 @@ contrib = p.word_contributions("TFIDF")   # dimension, word, contribution, relat
 ```
 
 This writes `work_dir/outputs/word_contributions_<METHOD>.csv` and shows, per
-dimension, each word's share and the running cumulative share — the standard
+dimension, each word's share and the running cumulative share, the standard
 way to check that (say) `innovation` is driven by genuine innovation terms
 rather than a few high-IDF artifacts.
 
@@ -271,7 +271,7 @@ rather than a few high-IDF artifacts.
 
 ## Large corpora
 
-Once parsing finishes, downstream stages stream through disk: `clean` reads parsed sentences line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The bottleneck is the **input stage**: the document loader holds the corpus in a Python list before parsing begins.
+Several stages stream text from disk: `clean` reads parsed sentences line by line; `phrase` and `train` use gensim's `PathLineSentences` so the training corpus is never fully materialized. The document loader holds the corpus in a Python list before parsing begins. Scoring and contribution diagnostics also materialize the document-level corpus in memory, and scoring accumulates the output rows.
 
 For corpora beyond a few hundred thousand documents, or when running on a cluster, see the [Run on HPC how-to](docs/how-to/run-on-hpc.md) for the multi-shard workflow, SLURM and SGE templates, and BLAS thread-cap instructions.
 

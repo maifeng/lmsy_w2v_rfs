@@ -33,7 +33,6 @@ cfg = Config(seeds={
 ### JSON file
 
 ```json
-// my_seeds.json
 {
   "risk":   ["risk", "uncertainty", "volatility", "hedge"],
   "growth": ["growth", "expand", "expansion", "scale"]
@@ -62,6 +61,8 @@ people: employee workforce talent hire retain
 from lmsy_w2v_rfs import Config, load_seeds
 cfg = Config(seeds=load_seeds("my_seeds.txt"))
 ```
+
+Each dimension name must be a nonblank string and map to a nonempty list of nonblank strings. String-valued dimensions and numeric seed elements raise `ValueError`; use JSON arrays or Python lists of strings.
 
 ### CLI
 
@@ -164,7 +165,7 @@ expanded word list and a score of zero for every document.
 
 Three fixes:
 
-1. **Lower `w2v_min_count`**. Pass `Config(w2v_min_count=2)` to keep rare
+1. **Lower `w2v_min_count`**. Pass `cfg.with_(w2v_min_count=2)` to keep rare
    words. Only safe when your corpus is small or your vocabulary is narrow.
 
 2. **Check seed coverage before full scoring**. After running `p.train()`,
@@ -182,15 +183,15 @@ Three fixes:
        print(f"{dim}: {len(words) - len(missing)}/{len(words)} in vocab; missing={missing}")
    ```
 
-3. **Use more, more common seed words**. Five seeds per concept is the floor.
-   The 2021 paper uses 7 to 12 per dimension. Redundancy matters: if one
+3. **Use more, more common seed words**. Several seeds per concept can improve coverage; five is a heuristic, not an enforced minimum.
+   The bundled paper dictionary uses 7 to 14 per dimension. Redundancy matters: if one
    seed is rare, the average still lands near the concept centroid.
 
 ## Gotcha: multi-word seeds need the matching preprocessor
 
 If you include a seed like `customer_service`, that token has to exist in the
 training corpus as a single underscored token. The CoreNLP backend produces
-those via UD `compound` joins. The spaCy backend does not. If you rely on
+those via dependency `compound` joins, as does the spaCy backend. spaCy's English models have more limited support for fixed expressions and phrasal verbs. If you rely on
 statistical phrases only (`use_gensim_phrases=True`), co-occurrence has to be
 high enough for gensim `Phrases` to discover the bigram. When in doubt,
 inspect the final training corpus at `work_dir/corpora/pass2.txt` and grep for
