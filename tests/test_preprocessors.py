@@ -18,7 +18,6 @@ from lmsy_w2v_rfs import Config
 from lmsy_w2v_rfs.preprocessors import build_preprocessor
 from lmsy_w2v_rfs.preprocessors.base import apply_mwe_list, load_mwe_list
 
-
 SAMPLE = (
     "Apple CEO Tim Cook said revenues grew in the third quarter of 2024. "
     "Our customer commitment is strong, with respect to long term value creation."

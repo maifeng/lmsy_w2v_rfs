@@ -8,7 +8,6 @@ import pytest
 
 from lmsy_w2v_rfs import STOPWORDS_SRAF, Config, load_example_seeds
 
-
 _SEEDS = {"risk": ["risk", "uncertainty"], "growth": ["growth", "scale"]}
 
 

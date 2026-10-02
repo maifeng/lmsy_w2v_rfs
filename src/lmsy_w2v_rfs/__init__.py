@@ -49,6 +49,9 @@ Origin paper:
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 from .config import (
     STOPWORDS_SRAF,
     Config,
@@ -57,14 +60,14 @@ from .config import (
     load_example_seeds,
     load_seeds,
 )
-from .preprocessors import Preprocessor, build_preprocessor
-from .preprocessors.base import apply_mwe_list, load_mwe_list
 from .dictionary import (
     expand_words_dimension_mean,
     read_dict_csv,
     write_dict_csv,
 )
 from .pipeline import Pipeline
+from .preprocessors import Preprocessor, build_preprocessor
+from .preprocessors.base import apply_mwe_list, load_mwe_list
 from .scoring import (
     ScoringMethod,
     aggregate_to_firm_year,
@@ -87,11 +90,18 @@ __paper__ = (
 )
 
 
-def download_corenlp(*args, **kwargs):  # type: ignore[no-untyped-def]
+def download_corenlp(*args: Any, **kwargs: Any) -> Path:
     """Install Stanford CoreNLP into the local cache directory.
 
     Imported lazily so the base install does not require ``stanza``.
     Requires the ``[corenlp]`` extra.
+
+    Args:
+        *args: Additional positional arguments forwarded to stanza's installer.
+        **kwargs: Installer options. ``install_dir`` selects a custom destination.
+
+    Returns:
+        Installation directory, also assigned to ``CORENLP_HOME``.
     """
     import os
     import pathlib
@@ -101,7 +111,7 @@ def download_corenlp(*args, **kwargs):  # type: ignore[no-untyped-def]
     home = kwargs.pop("install_dir", None) or default_cache_dir() / "corenlp"
     home = pathlib.Path(home).expanduser()
     home.mkdir(parents=True, exist_ok=True)
-    stanza.install_corenlp(dir=str(home), *args, **kwargs)
+    stanza.install_corenlp(*args, dir=str(home), **kwargs)
     os.environ["CORENLP_HOME"] = str(home)
     return home
 

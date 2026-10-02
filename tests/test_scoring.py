@@ -105,7 +105,7 @@ def test_word_contributions_shares_sum_to_one() -> None:
         "dimension", "word", "contribution", "relative", "cumulative",
     ]
     # Relative shares within each dimension sum to 1, cumulative ends at ~1.
-    for dim, grp in out.groupby("dimension"):
+    for _dim, grp in out.groupby("dimension"):
         assert abs(grp["relative"].sum() - 1.0) < 1e-9
         assert abs(grp["cumulative"].iloc[-1] - 1.0) < 1e-9
     # Within a dimension, contribution is sorted descending.

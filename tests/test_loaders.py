@@ -10,7 +10,6 @@ import pytest
 
 from lmsy_w2v_rfs import Config, Pipeline, load_seeds
 
-
 _SEEDS = {"a": ["a", "b"], "c": ["c", "d"]}
 
 
@@ -96,7 +95,6 @@ def test_load_seeds_wrapped_json_format(tmp_path: Path) -> None:
 
 def test_load_seeds_bundled_culture_file() -> None:
     """load_seeds should work on the bundled seeds_culture.json wrapped file."""
-    from lmsy_w2v_rfs import load_example_seeds
     from importlib import resources
 
     # Get path to the bundled file and pass it to load_seeds.
