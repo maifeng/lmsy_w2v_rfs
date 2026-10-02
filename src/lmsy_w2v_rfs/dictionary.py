@@ -9,10 +9,14 @@ from __future__ import annotations
 
 import math
 from collections import Counter
+from copy import copy
 from operator import itemgetter
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
+import numpy as np
 import pandas as pd
+from gensim import matutils
 from gensim.models import Word2Vec
 
 
@@ -36,35 +40,62 @@ def expand_words_dimension_mean(
         seeds: Mapping of dimension name to seed words.
         n: Top-k expansion per dimension.
         restrict_vocab: Restrict to the top fraction of vocab by
-            frequency, or ``None`` to use the full vocab.
+            frequency, or ``None`` to use the full vocab. A positive
+            fraction selects at least one candidate vocabulary entry.
         min_similarity: Discard candidates below this cosine.
         filter_words: Additional words to drop from expansion results.
 
     Returns:
         Mapping of dimension name to expanded word set.
     """
-    # restrict_vocab in gensim keeps the FIRST restrict_k entries of the
-    # current index order, so the index must be frequency-sorted for that to
-    # mean "the most frequent restrict_k words." Sorting is idempotent and
-    # cheap; without it, restrict_vocab silently searches an arbitrary slice.
-    model.wv.sort_by_descending_frequency()
-
     vocab = model.wv.key_to_index
     all_seeds = {w for ws in seeds.values() for w in ws}
 
-    restrict_k: int | None = None
+    # Keep indices, training state, and cached norms in the caller's model
+    # untouched. A shallow view shares read-only vectors but owns fresh norms.
+    search = copy(model.wv)
+    search.norms = None
+    search.fill_norms()
+    candidate_indices = np.arange(len(vocab))
     if restrict_vocab is not None:
-        restrict_k = int(len(vocab) * restrict_vocab)
+        if not 0 < restrict_vocab <= 1:
+            raise ValueError("restrict_vocab must be a fraction in (0, 1]")
+        restrict_k = max(1, int(len(vocab) * restrict_vocab))
+        counts = np.asarray(search.expandos["count"], dtype=np.int64)
+        # Match gensim's frequency ordering (including ties), without
+        # permuting the model's input or output embedding matrices.
+        candidate_indices = np.lexsort((-candidate_indices, -counts))[:restrict_k]
+    candidate_vectors = search.vectors
+    candidate_norms = search.norms
+    if restrict_vocab is not None:
+        candidate_vectors = candidate_vectors[candidate_indices]
+        candidate_norms = candidate_norms[candidate_indices]
 
     out: dict[str, set[str]] = {}
     for dim, words in seeds.items():
         in_vocab = [w for w in words if w in vocab]
-        if in_vocab:
+        if in_vocab and n > 0:
+            # Preserve gensim most_similar's individually normalized seed
+            # vectors. Ranking and deduplication retain n_similarity's
+            # historical raw-vector mean convention.
+            mean = search.get_mean_vector(
+                in_vocab, pre_normalize=True, post_normalize=True
+            )
+            similarities = (
+                np.dot(candidate_vectors, mean) / candidate_norms
+            )
+            own_seed_indices = {vocab[w] for w in in_vocab}
+            best = matutils.argsort(
+                similarities, topn=n + len(own_seed_indices), reverse=True
+            )
+            neighbors = [
+                (search.index_to_key[candidate_indices[i]], float(similarities[i]))
+                for i in best
+                if candidate_indices[i] not in own_seed_indices
+            ][:n]
             candidates = [
                 w
-                for w, sim in model.wv.most_similar(
-                    in_vocab, topn=n, restrict_vocab=restrict_k
-                )
+                for w, sim in neighbors
                 if sim >= min_similarity and w not in all_seeds
             ]
         else:
@@ -141,7 +172,7 @@ def rank_by_similarity(
 
 
 def write_dict_csv(culture_dict: dict[str, list[str]], path: Path | str) -> Path:
-    """Write an expanded dictionary to CSV (one column per dimension).
+    """Atomically write a dictionary CSV with one column per dimension.
 
     Args:
         culture_dict: Mapping of dimension to word list.
@@ -152,9 +183,20 @@ def write_dict_csv(culture_dict: dict[str, list[str]], path: Path | str) -> Path
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame.from_dict(culture_dict, orient="index").transpose().to_csv(
-        path, index=False
-    )
+    temporary: Path | None = None
+    try:
+        with NamedTemporaryFile(
+            mode="w", encoding="utf-8", newline="", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
+            pd.DataFrame.from_dict(culture_dict, orient="index").transpose().to_csv(
+                stream, index=False
+            )
+        temporary.replace(path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
     return path
 
 
@@ -167,8 +209,10 @@ def read_dict_csv(path: Path | str) -> tuple[dict[str, list[str]], set[str]]:
     Returns:
         ``(dimension_to_words, all_words)``.
     """
-    df = pd.read_csv(path, index_col=None)
-    culture = {k: [x for x in v if isinstance(x, str)] for k, v in df.to_dict("list").items()}
+    df = pd.read_csv(path, index_col=None, dtype=str, keep_default_na=False)
+    # Empty cells are padding for unequal dimension lengths; literal words
+    # such as "nan", "null", "NA", and numeric strings remain intact.
+    culture = {k: [x for x in v if x != ""] for k, v in df.to_dict("list").items()}
     all_words: set[str] = set()
     for v in culture.values():
         all_words |= set(v)

@@ -69,9 +69,17 @@ def apply_phrase_model(
 
     Returns:
         The output path.
+
+    Raises:
+        ValueError: If input and output refer to the same file.
     """
     input_path = Path(input_path)
     output_path = Path(output_path)
+    model_path = Path(model_path)
+    if input_path.resolve() == output_path.resolve() or (
+        output_path.exists() and input_path.samefile(output_path)
+    ):
+        raise ValueError("Phrase input and output must refer to different files")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     phraser = models.phrases.Phrases.load(str(model_path))
@@ -121,6 +129,14 @@ def learn_phrases(
 
 
 def _count_lines(path: Path) -> int:
+    """Count physical lines in a sentence file.
+
+    Args:
+        path: Input sentence file.
+
+    Returns:
+        Number of lines, including blank lines.
+    """
     n = 0
     with path.open("rb") as f:
         for _ in f:

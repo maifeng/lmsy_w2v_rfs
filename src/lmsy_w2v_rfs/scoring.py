@@ -1,13 +1,11 @@
 """Document and firm-year scoring.
 
 Three flavors: TF (raw counts), TFIDF (log ``N/df``), and WFIDF
-(``log(1+tf) * log(N/df)``). Each can be combined with a per-word
+(``(1+log(tf)) * log(N/df)``). Each can be combined with a per-word
 similarity weight to produce TFIDF+SIMWEIGHT or WFIDF+SIMWEIGHT.
 
-Streaming-friendly: document frequencies and doc-level corpora are
-built with a single pass over the sentence file, so the full corpus
-never needs to sit in RAM (the original 2021 implementation pickled
-the whole corpus; this one does not).
+The document-folding and frequency helpers accept streaming iterables.
+The Pipeline orchestrator can materialize documents before calling them.
 """
 
 from __future__ import annotations
@@ -21,6 +19,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 import tqdm
+from numpy.typing import NDArray
 from sklearn import preprocessing
 
 ScoringMethod = Literal["TF", "TFIDF", "WFIDF", "TFIDF+SIMWEIGHT", "WFIDF+SIMWEIGHT"]
@@ -42,6 +41,9 @@ def iter_doc_level_corpus(
 
     Yields:
         ``(doc_id, concatenated_document_text)`` pairs.
+
+    Raises:
+        ValueError: If sentence and ID file lengths differ.
     """
     sent_corpus_path = Path(sent_corpus_path)
     sent_id_path = Path(sent_id_path)
@@ -51,8 +53,8 @@ def iter_doc_level_corpus(
     with sent_corpus_path.open("r", encoding="utf-8") as f_txt, sent_id_path.open(
         "r", encoding="utf-8"
     ) as f_ids:
-        for txt, sid in zip(f_txt, f_ids, strict=False):
-            doc_id = sid.strip().split("_")[0]
+        for txt, sid in zip(f_txt, f_ids, strict=True):
+            doc_id = sid.strip().rsplit("_", 1)[0]
             if current_id is not None and doc_id != current_id:
                 yield current_id, " ".join(buffer)
                 buffer = []
@@ -128,15 +130,17 @@ def score_document(
                 continue
             # .get(w, 1) guards against a dictionary word that never appeared
             # in the corpus the df table was built on (df=1 -> idf=log N).
-            idf = math.log(n_docs / df_dict.get(w, 1)) if use_idf else 1.0  # type: ignore[union-attr]
+            idf = 1.0
+            if use_idf and n_docs is not None and df_dict is not None:
+                idf = math.log(n_docs / df_dict.get(w, 1))
             if method == "TF":
-                weight = tf
+                weight = float(tf)
             elif method.startswith("WFIDF"):
                 weight = (1 + math.log(tf)) * idf
             else:  # TFIDF and TFIDF+SIMWEIGHT
                 weight = tf * idf
-            if use_sim:
-                weight *= word_weights[w]  # type: ignore[index]
+            if use_sim and word_weights is not None:
+                weight *= word_weights[w]
             scores[dim] += weight
     return list(scores.values()), doc_len
 
@@ -184,7 +188,7 @@ def score_documents(
         ids.append(doc_id)
     if not rows:
         return pd.DataFrame(columns=["Doc_ID", *dims, "document_length"])
-    arr = np.asarray(rows, dtype=float)
+    arr: NDArray[np.float64] = np.asarray(rows, dtype=float)
     if normalize:
         arr[:, : len(dims)] = preprocessing.normalize(arr[:, : len(dims)])
     df = pd.DataFrame(arr, columns=[*dims, "document_length"])
@@ -233,6 +237,7 @@ def word_contributions(
     contrib: dict[str, defaultdict[str, float]] = {
         dim: defaultdict(float) for dim in expanded_words
     }
+    dictionary_words = {w for words in expanded_words.values() for w in words}
     docs = tqdm.tqdm(documents, disable=not show_progress, desc=f"contrib {method}")
     for _doc_id, text in docs:
         tokens = text.split()
@@ -240,15 +245,19 @@ def word_contributions(
         if doc_len == 0:
             continue
         for w, tf in Counter(tokens).items():
-            idf = math.log(n_docs / df_dict.get(w, 1)) if use_idf else 1.0  # type: ignore[union-attr]
+            if w not in dictionary_words:
+                continue
+            idf = 1.0
+            if use_idf and n_docs is not None and df_dict is not None:
+                idf = math.log(n_docs / df_dict.get(w, 1))
             if method == "TF":
                 weight = float(tf)
             elif method.startswith("WFIDF"):
                 weight = (1 + math.log(tf)) * idf
             else:
                 weight = tf * idf
-            if use_sim:
-                weight *= word_weights[w]  # type: ignore[index]
+            if use_sim and word_weights is not None:
+                weight *= word_weights[w]
             weight /= doc_len
             for dim, words in expanded_words.items():
                 if w in words:
