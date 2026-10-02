@@ -14,7 +14,6 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Literal
 
-
 PreprocessorName = Literal["none", "static", "stanza", "corenlp", "spacy"]
 """Valid values for ``Config.preprocessor``."""
 
@@ -28,6 +27,30 @@ Each entry maps a short example name to a JSON file under
 ``lmsy_w2v_rfs/data/``. Add new entries here to expose more reproducible
 example dictionaries.
 """
+
+
+def _validated_seeds(seeds: object) -> dict[str, list[str]]:
+    """Validate seed types and return a copy of the mapping.
+
+    Args:
+        seeds: Candidate mapping of dimension names to lists of seed strings.
+
+    Returns:
+        A fresh validated seed dictionary.
+
+    Raises:
+        ValueError: If the mapping, dimension names, or word lists are invalid.
+    """
+    if not isinstance(seeds, dict) or not seeds:
+        raise ValueError("Seeds must be a non-empty dict of str -> list[str].")
+    for dim, words in seeds.items():
+        if not isinstance(dim, str) or not dim.strip():
+            raise ValueError(f"Seed dimension names must be non-empty strings. Got: {dim!r}")
+        if not isinstance(words, list) or not words:
+            raise ValueError(f"Seeds for dimension {dim!r} must be a non-empty list of strings.")
+        if any(not isinstance(word, str) or not word.strip() for word in words):
+            raise ValueError(f"Seeds for dimension {dim!r} must contain only non-empty strings.")
+    return {dim: list(words) for dim, words in seeds.items()}
 
 
 def _load_stopwords() -> set[str]:
@@ -193,6 +216,7 @@ class Config:
     random_state: int = 42
 
     def __post_init__(self) -> None:
+        """Validate seed structure and numeric hyperparameters."""
         if not self.seeds:
             raise ValueError(
                 "Config.seeds is required and must be non-empty. "
@@ -202,13 +226,7 @@ class Config:
                 "To reproduce the 2021 paper, use "
                 'load_example_seeds("culture_2021").'
             )
-        for dim, words in self.seeds.items():
-            if not isinstance(dim, str) or not dim:
-                raise ValueError(f"Seed dimension names must be non-empty strings. Got: {dim!r}")
-            if not isinstance(words, list) or not words:
-                raise ValueError(
-                    f"Seeds for dimension {dim!r} must be a non-empty list of strings."
-                )
+        _validated_seeds(self.seeds)
         # Numeric guards: catch bad hyperparameters at construction time rather
         # than deep inside gensim or with a silently-empty result.
         if self.w2v_dim <= 0:
@@ -307,7 +325,8 @@ def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]
 
     Raises:
         FileNotFoundError: If ``source`` is a path that does not exist.
-        ValueError: If the JSON file is not a valid seed mapping.
+        ValueError: If the input does not contain a non-empty mapping of
+            dimension names to non-empty lists of seed strings.
         TypeError: If ``source`` is ``None``.
     """
     import json
@@ -319,7 +338,7 @@ def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]
             'load_example_seeds("culture_2021").'
         )
     if isinstance(source, dict):
-        return {k: list(v) for k, v in source.items()}
+        return _validated_seeds(source)
 
     path = Path(source)
     if not path.exists():
@@ -342,7 +361,7 @@ def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]
                 f"Seeds JSON file {path} must be a dict of "
                 f"str -> list[str]. Got unexpected value types."
             )
-        return {k: [str(x) for x in v] for k, v in flat.items()}
+        return _validated_seeds(flat)
 
     # Plain text: "dim: word1 word2 word3" per line.
     out: dict[str, list[str]] = {}
@@ -357,6 +376,6 @@ def load_seeds(source: str | Path | dict[str, list[str]]) -> dict[str, list[str]
         dim, rest = line.split(":", 1)
         words = [w for w in rest.replace(",", " ").split() if w]
         if not words:
-            continue
+            raise ValueError(f"{path}:{lineno}: seed list must be non-empty")
         out[dim.strip()] = words
-    return out
+    return _validated_seeds(out)

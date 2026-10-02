@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import tempfile
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict
 from pathlib import Path
@@ -27,8 +28,6 @@ from gensim.models import Word2Vec
 
 from .cleaner import clean_plain_line
 from .config import Config
-from .preprocessors import build_preprocessor
-from .preprocessors.base import apply_mwe_list, load_mwe_list
 from .dictionary import (
     deduplicate_keywords,
     expand_words_dimension_mean,
@@ -38,6 +37,8 @@ from .dictionary import (
     write_dict_csv,
 )
 from .phrases import learn_phrases
+from .preprocessors import build_preprocessor
+from .preprocessors.base import apply_mwe_list, load_mwe_list
 from .scoring import (
     ScoringMethod,
     aggregate_to_firm_year,
@@ -50,6 +51,25 @@ from .scoring import (
 from .w2v import load_word2vec, train_word2vec
 
 log = logging.getLogger(__name__)
+
+
+def _config_json_value(value: object) -> str | list[Any]:
+    """Serialize supported non-JSON configuration values.
+
+    Args:
+        value: A Path or set supplied in configuration fields.
+
+    Returns:
+        A path string or a consistently ordered list.
+
+    Raises:
+        TypeError: If the value has no supported JSON representation.
+    """
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (set, frozenset)):
+        return sorted(value)
+    raise TypeError(f"Cannot serialize configuration value of type {type(value).__name__}")
 
 
 class Pipeline:
@@ -102,9 +122,8 @@ class Pipeline:
         if self._texts is not None and self._doc_ids is None:
             self._doc_ids = [str(i) for i in range(len(self._texts))]
         if self._texts is not None and self._doc_ids is not None:
-            assert len(self._texts) == len(self._doc_ids), (
-                "texts and doc_ids must have the same length"
-            )
+            if len(self._texts) != len(self._doc_ids):
+                raise ValueError("texts and doc_ids must have the same length")
         self._w2v_model: Word2Vec | None = None
         self._culture_dict: dict[str, list[str]] | None = None
         self._scores: dict[str, pd.DataFrame] = {}
@@ -218,7 +237,7 @@ class Pipeline:
                         if hasattr(preprocessor, "process_documents")
                         else (preprocessor.process(t) for t in chunk_texts)
                     )
-                    for did, sentences in zip(chunk_ids, stream, strict=False):
+                    for did, sentences in zip(chunk_ids, stream, strict=True):
                         if mwe_extra:
                             sentences = apply_mwe_list(sentences, mwe_extra)
                         for j, sent in enumerate(sentences):
@@ -354,7 +373,9 @@ class Pipeline:
             self.expand_dictionary()
         assert self._culture_dict is not None
 
-        expanded = {d: set(ws) for d, ws in self._culture_dict.items()}
+        expanded: dict[str, list[str] | set[str]] = {
+            d: set(ws) for d, ws in self._culture_dict.items()
+        }
         weights = similarity_weights(self._culture_dict)
 
         docs_for_df = list(
@@ -366,7 +387,7 @@ class Pipeline:
             out_path = self.scores_path(method)
             if not force and out_path.exists():
                 log.info("score[%s]: reusing %s", method, out_path)
-                self._scores[method] = pd.read_csv(out_path)
+                self._scores[method] = pd.read_csv(out_path, converters={"Doc_ID": str})
                 continue
             df = score_documents(
                 docs_for_df,
@@ -413,7 +434,9 @@ class Pipeline:
             log.info("word_contributions[%s]: reusing %s", method, out_path)
             return pd.read_csv(out_path)
 
-        expanded = {d: set(ws) for d, ws in self._culture_dict.items()}
+        expanded: dict[str, list[str] | set[str]] = {
+            d: set(ws) for d, ws in self._culture_dict.items()
+        }
         weights = similarity_weights(self._culture_dict)
         docs_for_df = list(
             iter_doc_level_corpus(self.training_corpus_path, self.parsed_ids_path)
@@ -463,7 +486,7 @@ class Pipeline:
         if method not in self._scores:
             path = self.scores_path(method)
             if path.exists():
-                self._scores[method] = pd.read_csv(path)
+                self._scores[method] = pd.read_csv(path, converters={"Doc_ID": str})
             else:
                 raise KeyError(f"No scores for {method}. Run .score().")
         return self._scores[method]
@@ -574,8 +597,9 @@ class Pipeline:
 
         The 2021 paper allowed researchers to drop noisy expansion
         candidates (and occasionally append domain words the model
-        missed) before scoring. This method does both atomically:
-        in-memory dict and on-disk CSV are updated together.
+        missed) before scoring. The edited CSV is saved through an atomic
+        replacement before updating the in-memory dictionary. A failed save
+        leaves the previous dictionary and score caches in place.
 
         Use programmatically from a notebook, or pair with
         :meth:`reload_dictionary` to drive curation from a spreadsheet.
@@ -606,20 +630,22 @@ class Pipeline:
                         f"Unknown dimension {dim!r}. Known: {sorted(known)}."
                     )
 
+        edited = {dim: list(words) for dim, words in self._culture_dict.items()}
         for dim, words in (remove or {}).items():
             drop = set(words)
-            self._culture_dict[dim] = [w for w in self._culture_dict[dim] if w not in drop]
+            edited[dim] = [w for w in edited[dim] if w not in drop]
 
         for dim, words in (add or {}).items():
-            existing = list(self._culture_dict[dim])
+            existing = edited[dim]
             seen = set(existing)
             for w in words:
                 if w not in seen:
                     existing.append(w)
                     seen.add(w)
-            self._culture_dict[dim] = existing
+            edited[dim] = existing
 
-        write_dict_csv(self._culture_dict, self.dict_path)
+        write_dict_csv(edited, self.dict_path)
+        self._culture_dict = edited
         self._invalidate_scores()
         return self._culture_dict
 
@@ -644,7 +670,7 @@ class Pipeline:
         return self._culture_dict
 
     def _invalidate_scores(self) -> None:
-        """Drop in-memory score cache and remove score CSVs on disk.
+        """Drop cached scores and word contributions after dictionary changes.
 
         Called by :meth:`edit_dictionary` and :meth:`reload_dictionary`
         so the next :meth:`score` call recomputes against the curated
@@ -653,18 +679,29 @@ class Pipeline:
         self._scores.clear()
         scores_dir = self.work_dir / "outputs"
         if scores_dir.exists():
-            for path in scores_dir.glob("scores_*.csv"):
-                path.unlink()
+            for pattern in ("scores_*.csv", "word_contributions_*.csv"):
+                for path in scores_dir.glob(pattern):
+                    path.unlink()
 
     def _dump_config(self) -> None:
+        """Save the current configuration without exposing partial JSON files."""
+        temporary: Path | None = None
         try:
             obj: dict[str, Any] = asdict(self.config)
             obj["stopwords"] = sorted(self.config.stopwords)
-            (self.work_dir / "config.json").write_text(
-                json.dumps(obj, indent=2, default=list)
-            )
+            serialized = json.dumps(obj, indent=2, default=_config_json_value)
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=self.work_dir,
+                prefix="config-", suffix=".json.tmp", delete=False,
+            ) as output:
+                temporary = Path(output.name)
+                output.write(serialized)
+            temporary.replace(self.work_dir / "config.json")
         except Exception as e:  # pragma: no cover
             log.warning("Could not dump config: %s", e)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     # ---------- construction sugar -----------------------------------
 
@@ -750,10 +787,12 @@ class Pipeline:
         Returns:
             A new ``Pipeline``.
         """
-        texts = df[text_col].astype(str).tolist()
+        texts = df[text_col].fillna("").astype(str).tolist()
         if id_col is None:
             ids = [str(i) for i in df.index.tolist()]
         else:
+            if df[id_col].isna().any() or df[id_col].astype(str).str.strip().eq("").any():
+                raise ValueError(f"Document IDs in {id_col!r} must not be missing or blank")
             ids = df[id_col].astype(str).tolist()
         return cls(texts=texts, doc_ids=ids, work_dir=work_dir, config=config)
 
@@ -785,6 +824,16 @@ class Pipeline:
         Returns:
             A new ``Pipeline``.
         """
+        # Preserve identifier spelling unless the caller explicitly selects a
+        # converter or dtype for that column. Other columns retain pandas defaults.
+        converters = dict(read_csv_kwargs.get("converters") or {})
+        dtype = read_csv_kwargs.get("dtype")
+        if id_col is not None and id_col not in converters and (
+            dtype is None or isinstance(dtype, dict) and id_col not in dtype
+        ):
+            converters[id_col] = str
+        if converters:
+            read_csv_kwargs["converters"] = converters
         df = pd.read_csv(csv_path, **read_csv_kwargs)
         return cls.from_dataframe(
             df, text_col=text_col, id_col=id_col, work_dir=work_dir, config=config
@@ -826,6 +875,13 @@ class Pipeline:
                 if not raw:
                     continue
                 obj = json.loads(raw)
-                texts.append(str(obj[text_key]))
-                ids.append(str(obj[id_key]) if id_key else str(i))
+                text = obj[text_key]
+                texts.append("" if text is None else str(text))
+                if id_key:
+                    identifier = obj[id_key]
+                    if identifier is None or not str(identifier).strip():
+                        raise ValueError(f"{jsonl_path}:{i}: document ID must not be missing or blank")
+                    ids.append(str(identifier))
+                else:
+                    ids.append(str(i))
         return cls(texts=texts, doc_ids=ids, work_dir=work_dir, config=config)
